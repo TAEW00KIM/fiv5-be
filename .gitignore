@@ -1,0 +1,65 @@
+# ==================================
+# Spring Boot & Build Tools (Maven/Gradle)
+# ==================================
+
+# Build output
+/build/
+/target/
+
+# Gradle
+.gradle/
+!wrapper/gradle-wrapper.jar
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# Compiled Java class files
+*.class
+
+# Log files
+*.log
+
+# ==================================
+# IDE (IntelliJ, VSCode)
+# ==================================
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+
+# VSCode
+.vscode/
+
+# ==================================
+# Credentials & Secrets (!!! 중요 !!!)
+# ==================================
+
+# Firebase Admin SDK Service Account Key
+# (Firebase 콘솔에서 다운받은 JSON 키 파일)
+*.json
+
+# AWS Credentials
+.aws/
+credentials
+config
+
+# Environment variables
+.env
+
+# Application properties (local, dev 등 민감 정보 포함)
+application-local.properties
+application-dev.properties
+application-prod.properties
+
+# ==================================
+# OS (Mac, Windows)
+# ==================================
+
+# Mac
+.DS_Store
+
+# Windows
+Thumbs.db
