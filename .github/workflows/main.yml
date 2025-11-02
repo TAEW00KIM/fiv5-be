@@ -30,7 +30,7 @@ jobs:
           host: ${{ secrets.HOST_IP }}
           username: ${{ secrets.HOST_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "build/libs/${{ secrets.JAR_FILE_NAME }}"
+          source: "build/libs/${{ secrets.JAR_FILE_NAME }}" 
           target: "~/fiv5"
           rename: "app.jar"
 
