@@ -42,8 +42,6 @@ mvnw.cmd
 
 # AWS Credentials
 .aws/
-credentials
-config
 
 # Environment variables
 .env
