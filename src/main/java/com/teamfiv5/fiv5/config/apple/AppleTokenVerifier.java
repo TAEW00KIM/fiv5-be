@@ -1,6 +1,8 @@
 package com.teamfiv5.fiv5.config.apple;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.teamfiv5.fiv5.global.exception.CustomException;
+import com.teamfiv5.fiv5.global.exception.code.ErrorCode;
 import io.jsonwebtoken.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -65,9 +67,8 @@ public class AppleTokenVerifier {
                     .getBody();
 
         } catch (Exception e) {
-            // Log.error("Apple ID 토큰 검증 실패: {}", e.getMessage());
-            throw new RuntimeException("Apple ID 토큰 검증에 실패했습니다.", e);
-        }
+        throw new CustomException(ErrorCode.APPLE_TOKEN_VERIFY_FAILED, e);
+    }
     }
 
     private PublicKey createPublicKey(ApplePublicKeys.ApplePublicKey key) throws Exception {
