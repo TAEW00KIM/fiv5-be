@@ -15,6 +15,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -104,6 +105,7 @@ public class S3UploadService {
 
     /**
      * S3에서 파일을 삭제합니다.
+     * (수정) URL에서 S3 'key'를 추출하는 로직을 버그 수정
      * @param fileUrl 삭제할 파일의 전체 URL
      */
     public void delete(String fileUrl) {
@@ -112,18 +114,24 @@ public class S3UploadService {
         }
 
         try {
-            // URL에서 S3 'key' (파일 경로) 추출
-            String key = fileUrl.substring(fileUrl.indexOf(bucket) + bucket.length() + 1);
+            // (수정) URL 객체를 사용하여 'key'를 안전하게 추출
+            URL url = new URL(fileUrl);
+            String key = url.getPath(); // 예: "/profiles/uuid_image.jpg"
+
+            // 맨 앞의 '/' 제거
+            if (key.startsWith("/")) {
+                key = key.substring(1); // "profiles/uuid_image.jpg"
+            }
 
             DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
                     .bucket(bucket)
-                    .key(key)
+                    .key(key) // 올바른 key 값
                     .build();
 
             s3Client.deleteObject(deleteObjectRequest);
 
         } catch (Exception e) {
-            // 삭제 실패 시 로그만 남김 (이미 삭제되었거나, URL이 잘못되었을 수 있음)
+            // 삭제 실패 시 로그만 남김
             System.err.println("S3 파일 삭제 실패: " + fileUrl + " (" + e.getMessage() + ")");
         }
     }
