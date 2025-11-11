@@ -197,4 +197,40 @@ public class FriendController {
         List<UserDto.UserResponse> requesters = friendService.getReceivedFriendRequests(myUserId);
         return ResponseEntity.ok(CustomResponse.ok(requesters));
     }
+
+    /**
+     * API 7. 내가 보낸 친구 요청 목록 조회
+     */
+    @Operation(summary = "[친구] 7. (Pull) 내가 보낸 친구 요청 목록 (수락 대기)",
+            description = "내가 친구 요청을 보냈지만 아직 상대방이 수락하지 않은 (PENDING) 사용자 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공", content = @Content),
+            @ApiResponse(responseCode = "401", description = "(COMMON401) 인증 실패", content = @Content)
+    })
+    @GetMapping("/requests/sent")
+    public ResponseEntity<CustomResponse<List<UserDto.UserResponse>>> getSentFriendRequests(
+            @AuthenticationPrincipal AuthenticatedUser user
+    ) {
+        Long myUserId = getUserId(user);
+        List<UserDto.UserResponse> receivers = friendService.getSentFriendRequests(myUserId);
+        return ResponseEntity.ok(CustomResponse.ok(receivers));
+    }
+
+    /**
+     * API 8. 내 친구 목록 조회
+     */
+    @Operation(summary = "[친구] 8. (Pull) 내 친구 목록",
+            description = "서로 친구 관계(FRIENDSHIP)가 수락된 모든 사용자 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공", content = @Content),
+            @ApiResponse(responseCode = "401", description = "(COMMON401) 인증 실패", content = @Content)
+    })
+    @GetMapping("") // GET /api/v1/friends
+    public ResponseEntity<CustomResponse<List<UserDto.UserResponse>>> getMyFriends(
+            @AuthenticationPrincipal AuthenticatedUser user
+    ) {
+        Long myUserId = getUserId(user);
+        List<UserDto.UserResponse> friends = friendService.getMyFriends(myUserId);
+        return ResponseEntity.ok(CustomResponse.ok(friends));
+    }
 }
