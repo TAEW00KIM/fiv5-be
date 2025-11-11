@@ -129,9 +129,7 @@ public class FriendService {
         User me = findUserById(myUserId);
 
         // 3. (예외 처리) A->B, B->A 중복 요청 방지 (ID 비교)
-        List<Friendship> existing = friendshipRepository.findAllFriendshipsByUserId(myUserId);
-        boolean alreadyExists = existing.stream()
-                .anyMatch(f -> f.getRequester().getId().equals(target.getId()) || f.getReceiver().getId().equals(target.getId()));
+        boolean alreadyExists = friendshipRepository.existsFriendshipBetween(myUserId, target.getId());
 
         if (alreadyExists) {
             throw new CustomException(ErrorCode.FRIEND_REQUEST_ALREADY_EXISTS);
@@ -172,7 +170,7 @@ public class FriendService {
      */
     public List<UserDto.UserResponse> getReceivedFriendRequests(Long myUserId) {
         // 1. 내가 '수신자(receiver)'이고 상태가 'PENDING'인 모든 요청을 조회
-        List<Friendship> pendingRequests = friendshipRepository.findByReceiverIdAndStatus(
+        List<Friendship> pendingRequests = friendshipRepository.findByReceiverIdAndStatusWithRequester(
                 myUserId,
                 FriendshipStatus.PENDING
         );
@@ -191,7 +189,7 @@ public class FriendService {
      */
     public List<UserDto.UserResponse> getSentFriendRequests(Long myUserId) {
         // 1. 내가 '요청자(requester)'이고 상태가 'PENDING'인 모든 요청을 조회
-        List<Friendship> sentRequests = friendshipRepository.findByRequesterIdAndStatus(
+        List<Friendship> sentRequests = friendshipRepository.findByRequesterIdAndStatusWithReceiver(
                 myUserId,
                 FriendshipStatus.PENDING
         );
@@ -210,7 +208,7 @@ public class FriendService {
      */
     public List<UserDto.UserResponse> getMyFriends(Long myUserId) {
         // 1. 내가 포함된(A든 B든) 'FRIENDSHIP' 상태인 모든 관계 조회
-        List<Friendship> friendships = friendshipRepository.findAllFriends(
+        List<Friendship> friendships = friendshipRepository.findAllFriendsWithUsers(
                 myUserId,
                 FriendshipStatus.FRIENDSHIP
         );
