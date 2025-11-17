@@ -125,18 +125,23 @@ public class FriendService {
     @Transactional
     public void acceptFriend(Long myUserId, Long requesterId) {
 
-        long myFriendCount = friendshipRepository.countByUserIdAndStatus(myUserId, FriendshipStatus.FRIENDSHIP);
+        User me = userRepository.findByIdWithLock(myUserId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        User requester = userRepository.findByIdWithLock(requesterId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        long myFriendCount = friendshipRepository.countByUserIdAndStatus(me.getId(), FriendshipStatus.FRIENDSHIP);
         if (myFriendCount >= MAX_FRIEND_LIMIT) {
             throw new CustomException(ErrorCode.FRIEND_LIMIT_EXCEEDED);
         }
 
-        long requesterFriendCount = friendshipRepository.countByUserIdAndStatus(requesterId, FriendshipStatus.FRIENDSHIP);
+        long requesterFriendCount = friendshipRepository.countByUserIdAndStatus(requester.getId(), FriendshipStatus.FRIENDSHIP);
         if (requesterFriendCount >= MAX_FRIEND_LIMIT) {
             throw new CustomException(ErrorCode.TARGET_FRIEND_LIMIT_EXCEEDED);
         }
 
         Friendship friendship = friendshipRepository
-                .findByRequesterIdAndReceiverIdAndStatus(requesterId, myUserId, FriendshipStatus.PENDING)
+                .findByRequesterIdAndReceiverIdAndStatus(requester.getId(), me.getId(), FriendshipStatus.PENDING)
                 .orElseThrow(() -> new CustomException(ErrorCode.FRIEND_REQUEST_NOT_FOUND));
 
         friendship.accept();
