@@ -163,6 +163,15 @@ public class FriendService {
     }
 
     @Transactional
+    public void rejectFriendRequest(Long myUserId, Long requesterId) {
+        Friendship friendship = friendshipRepository
+                .findByRequesterIdAndReceiverIdAndStatus(requesterId, myUserId, FriendshipStatus.PENDING)
+                .orElseThrow(() -> new CustomException(ErrorCode.FRIEND_REQUEST_NOT_FOUND));
+
+        friendshipRepository.delete(friendship);
+    }
+
+    @Transactional
     public void deleteFriend(Long myUserId, Long friendId) {
         Friendship friendship = friendshipRepository
                 .findFriendshipBetweenUsersByStatus(myUserId, friendId, FriendshipStatus.FRIENDSHIP)

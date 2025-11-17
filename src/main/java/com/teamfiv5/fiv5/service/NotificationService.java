@@ -46,4 +46,39 @@ public class NotificationService {
             log.error("FCM 메시지 빌드 중 알 수 없는 오류", e);
         }
     }
+
+    public void sendDirectMessageNotification(String targetFcmToken, String senderNickname, String messageText) {
+        try {
+            String title = senderNickname;
+
+            String body = messageText;
+            if (body.length() > 100) {
+                body = body.substring(0, 100) + "...";
+            }
+
+            Message message = Message.builder()
+                    .setToken(targetFcmToken)
+                    .setNotification(Notification.builder()
+                            .setTitle(title)
+                            .setBody(body)
+                            .build())
+                    .setApnsConfig(ApnsConfig.builder()
+                            .setAps(Aps.builder()
+                                    .setSound("default")
+                                    .setContentAvailable(true)
+                                    .build())
+                            .build())
+                    .putData("type", "DIRECT_MESSAGE")
+                    .putData("senderNickname", senderNickname)
+                    .build();
+
+            String response = FirebaseMessaging.getInstance().send(message);
+            log.info("DM FCM 발송 성공: " + response);
+
+        } catch (FirebaseMessagingException e) {
+            log.error("DM FCM 발송 실패: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("DM FCM 메시지 빌드 중 알 수 없는 오류", e);
+        }
+    }
 }

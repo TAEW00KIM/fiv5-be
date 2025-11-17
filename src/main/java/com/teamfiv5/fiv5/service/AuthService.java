@@ -1,5 +1,7 @@
 package com.teamfiv5.fiv5.service;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
 import com.teamfiv5.fiv5.config.jwt.JwtTokenProvider;
 import com.teamfiv5.fiv5.domain.User;
 import com.teamfiv5.fiv5.dto.AppleLoginRequest;
@@ -74,7 +76,18 @@ public class AuthService {
         boolean treatAsNewUser = isActuallyNewUser || user.getNickname().startsWith("user_") || user.getNickname().startsWith("행복한 ") || user.getNickname().startsWith("즐거운 ");
 
         String accessToken = jwtTokenProvider.createAccessToken(user);
-        return new AuthResponse(accessToken, treatAsNewUser);
+        String firebaseCustomToken = createFirebaseCustomToken(user.getId());
+
+        return new AuthResponse(accessToken, treatAsNewUser, firebaseCustomToken);
+    }
+
+    private String createFirebaseCustomToken(Long userId) {
+        String uid = String.valueOf(userId);
+        try {
+            return FirebaseAuth.getInstance().createCustomToken(uid);
+        } catch (FirebaseAuthException e) {
+            throw new RuntimeException("Firebase 커스텀 토큰 생성 실패", e);
+        }
     }
 
     private String generateUniqueBluetoothToken() {
