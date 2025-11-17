@@ -1,5 +1,8 @@
 package com.teamfiv5.fiv5.service;
 
+import com.google.cloud.firestore.Firestore;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.messaging.FirebaseMessaging;
 import com.teamfiv5.fiv5.domain.Friendship;
 import com.teamfiv5.fiv5.domain.FriendshipStatus;
 import com.teamfiv5.fiv5.domain.User;
@@ -13,7 +16,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.transaction.annotation.Transactional;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import java.util.HexFormat;
 import java.util.List;
@@ -37,6 +42,15 @@ class FriendServiceIntegrationTest {
 
     @Autowired
     private AuthService authService;
+
+    @MockBean
+    private S3Client s3Client;
+    @MockBean
+    private Firestore firestore;
+    @MockBean
+    private FirebaseAuth firebaseAuth;
+    @MockBean
+    private FirebaseMessaging firebaseMessaging;
 
     private User userA;
     private User userB;
