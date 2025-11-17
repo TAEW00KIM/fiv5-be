@@ -106,6 +106,26 @@ class FriendServiceIntegrationTest {
                 .containsOnly(FriendDto.FriendshipStatusInfo.NONE);
     }
 
+    private void createAndSaveFriends(User user, int count) {
+        List<User> dummyFriends = IntStream.range(1, count + 1)
+                .mapToObj(i -> User.builder()
+                        .nickname("F" + i + "_" + user.getNickname())
+                        .provider("apple")
+                        .providerId("f" + i + "_" + user.getNickname())
+                        .build())
+                .peek(u -> u.updateBluetoothToken(generateTestToken()))
+                .toList();
+        userRepository.saveAll(dummyFriends);
+
+        dummyFriends.forEach(friend ->
+                friendshipRepository.save(Friendship.builder()
+                        .requester(user)
+                        .receiver(friend)
+                        .status(FriendshipStatus.FRIENDSHIP)
+                        .build())
+        );
+    }
+
     @Test
     @DisplayName("성공: A가 B의 ID로 친구 요청을 보낸다")
     void requestFriend_Success() {
@@ -178,19 +198,7 @@ class FriendServiceIntegrationTest {
     @Test
     @DisplayName("실패: '내'가 친구 수 5명 제한에 도달 (FRIEND_LIMIT_EXCEEDED)")
     void acceptFriend_Fail_MyLimitExceeded() {
-        List<User> dummyFriends = IntStream.range(1, 6)
-                .mapToObj(i -> User.builder().nickname("F" + i).provider("apple").providerId("f" + i).build())
-                .peek(user -> user.updateBluetoothToken(generateTestToken()))
-                .toList();
-        userRepository.saveAll(dummyFriends);
-
-        dummyFriends.forEach(friend ->
-                friendshipRepository.save(Friendship.builder()
-                        .requester(userA)
-                        .receiver(friend)
-                        .status(FriendshipStatus.FRIENDSHIP)
-                        .build())
-        );
+        createAndSaveFriends(userA, 5);
 
         friendshipRepository.save(Friendship.builder()
                 .requester(userB)
@@ -209,19 +217,7 @@ class FriendServiceIntegrationTest {
     @Test
     @DisplayName("실패: '상대방'이 친구 수 5명 제한에 도달 (TARGET_FRIEND_LIMIT_EXCEEDED)")
     void acceptFriend_Fail_TargetLimitExceeded() {
-        List<User> dummyFriends = IntStream.range(1, 6)
-                .mapToObj(i -> User.builder().nickname("F" + i).provider("apple").providerId("f" + i).build())
-                .peek(user -> user.updateBluetoothToken(generateTestToken()))
-                .toList();
-        userRepository.saveAll(dummyFriends);
-
-        dummyFriends.forEach(friend ->
-                friendshipRepository.save(Friendship.builder()
-                        .requester(userB)
-                        .receiver(friend)
-                        .status(FriendshipStatus.FRIENDSHIP)
-                        .build())
-        );
+        createAndSaveFriends(userB, 5);
 
         friendshipRepository.save(Friendship.builder()
                 .requester(userB)
