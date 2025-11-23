@@ -1,12 +1,5 @@
 package com.teamloci.loci.service;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.teamloci.loci.domain.Friendship;
 import com.teamloci.loci.domain.FriendshipStatus;
@@ -18,8 +11,17 @@ import com.teamloci.loci.global.exception.code.ErrorCode;
 import com.teamloci.loci.global.util.AesUtil;
 import com.teamloci.loci.repository.FriendshipRepository;
 import com.teamloci.loci.repository.UserRepository;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -64,26 +66,34 @@ public class FriendService {
     }
 
     @Transactional
-    public void addFriend(Long myUserId, Long targetUserId) {
+    public void sendFriendRequest(Long myUserId, Long targetUserId) {
         if (myUserId.equals(targetUserId)) throw new CustomException(ErrorCode.SELF_FRIEND_REQUEST);
 
         User me = findUserById(myUserId);
         User target = findUserById(targetUserId);
 
-        // 이미 친구인지 확인
-        if (friendshipRepository.existsFriendshipBetween(myUserId, targetUserId)) {
-            throw new CustomException(ErrorCode.FRIEND_REQUEST_ALREADY_EXISTS);
+        Optional<Friendship> existing = friendshipRepository.findFriendshipBetween(myUserId, targetUserId);
+        if (existing.isPresent()) {
+            Friendship f = existing.get();
+            if (f.getStatus() == FriendshipStatus.FRIENDSHIP) {
+                throw new CustomException(ErrorCode.FRIEND_REQUEST_ALREADY_EXISTS);
+            }
+            if (f.getRequester().getId().equals(myUserId)) {
+                throw new CustomException(ErrorCode.FRIEND_REQUEST_ALREADY_EXISTS);
+            } else {
+                f.accept();
+                return;
+            }
         }
 
-        // 친구 수 제한 체크
-        long myCount = friendshipRepository.countByUserIdAndStatus(myUserId, FriendshipStatus.FRIENDSHIP);
-        if (myCount >= MAX_FRIEND_LIMIT) throw new CustomException(ErrorCode.FRIEND_LIMIT_EXCEEDED);
+        if (friendshipRepository.countFriends(myUserId) >= MAX_FRIEND_LIMIT) {
+            throw new CustomException(ErrorCode.FRIEND_LIMIT_EXCEEDED);
+        }
 
-        // 바로 맞팔(FRIENDSHIP) 상태로 저장 (단방향/양방향 정책에 따라 다르지만, 보통 이런 앱은 양방향)
         Friendship friendship = Friendship.builder()
                 .requester(me)
                 .receiver(target)
-                .status(FriendshipStatus.FRIENDSHIP) // PENDING 아님
+                .status(FriendshipStatus.PENDING)
                 .build();
 
         friendshipRepository.save(friendship);
@@ -93,27 +103,64 @@ public class FriendService {
         }
     }
 
+    @Transactional
+    public void acceptFriendRequest(Long myUserId, Long requesterId) {
+        // requesterId: 나에게 친구 요청을 보낸 사람의 ID
+        Friendship friendship = friendshipRepository.findFriendshipBetween(myUserId, requesterId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FRIEND_REQUEST_NOT_FOUND));
+
+        if (!friendship.getReceiver().getId().equals(myUserId)) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (friendship.getStatus() == FriendshipStatus.FRIENDSHIP) {
+            throw new CustomException(ErrorCode.FRIEND_REQUEST_ALREADY_EXISTS);
+        }
+
+        if (friendshipRepository.countFriends(myUserId) >= MAX_FRIEND_LIMIT) {
+            throw new CustomException(ErrorCode.FRIEND_LIMIT_EXCEEDED);
+        }
+
+        friendship.accept();
+    }
+
+    @Transactional
+    public void deleteFriendship(Long myUserId, Long targetUserId) {
+        Friendship friendship = friendshipRepository.findFriendshipBetween(myUserId, targetUserId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FRIEND_REQUEST_NOT_FOUND));
+
+        friendshipRepository.delete(friendship);
+    }
+
     public List<UserDto.UserResponse> getMyFriends(Long myUserId) {
-        return friendshipRepository.findAllFriendsWithUsers(myUserId, FriendshipStatus.FRIENDSHIP)
+        return friendshipRepository.findAllFriendsWithUsers(myUserId)
                 .stream()
                 .map(f -> f.getRequester().getId().equals(myUserId) ? f.getReceiver() : f.getRequester())
                 .map(UserDto.UserResponse::from)
                 .collect(Collectors.toList());
     }
 
-    @Transactional
-    public void deleteFriend(Long myUserId, Long friendId) {
-        Friendship friendship = friendshipRepository
-                .findFriendshipBetweenUsersByStatus(myUserId, friendId, FriendshipStatus.FRIENDSHIP)
-                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FRIENDS));
-        friendshipRepository.delete(friendship);
+    public List<UserDto.UserResponse> getReceivedRequests(Long myUserId) {
+        return friendshipRepository.findReceivedRequests(myUserId).stream()
+                .map(Friendship::getRequester)
+                .map(UserDto.UserResponse::from)
+                .collect(Collectors.toList());
     }
 
-    public List<UserDto.UserResponse> searchUsers(String keyword) {
+    public List<UserDto.UserResponse> getSentRequests(Long myUserId) {
+        return friendshipRepository.findSentRequests(myUserId).stream()
+                .map(Friendship::getReceiver)
+                .map(UserDto.UserResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    public List<UserDto.UserResponse> searchUsers(String keyword, int page, int size) {
         if (keyword == null || keyword.isBlank()) return List.of();
-        
-        return userRepository.findTop10ByHandleContainingOrNicknameContaining(keyword, keyword)
-                .stream()
+
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("id").descending());
+        Slice<User> userSlice = userRepository.findByHandleContainingOrNicknameContaining(keyword, keyword, pageRequest);
+
+        return userSlice.getContent().stream()
                 .map(UserDto.UserResponse::from)
                 .collect(Collectors.toList());
     }

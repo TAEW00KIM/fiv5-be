@@ -6,8 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Optional;
 import java.util.List;
+import java.util.Optional;
 
 public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
 
@@ -15,56 +15,27 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
             "WHERE (f.requester.id = :userId OR f.receiver.id = :userId)")
     List<Friendship> findAllFriendshipsByUserId(@Param("userId") Long userId);
 
-    Optional<Friendship> findByRequesterIdAndReceiverIdAndStatus(
-            Long requesterId,
-            Long receiverId,
-            FriendshipStatus status
-    );
-
-    @Query("SELECT f FROM Friendship f JOIN FETCH f.requester " +
-            "WHERE f.receiver.id = :receiverId AND f.status = :status")
-    List<Friendship> findByReceiverIdAndStatusWithRequester(
-            @Param("receiverId") Long receiverId,
-            @Param("status") FriendshipStatus status
-    );
-
-    @Query("SELECT f FROM Friendship f JOIN FETCH f.receiver " +
-            "WHERE f.requester.id = :requesterId AND f.status = :status")
-    List<Friendship> findByRequesterIdAndStatusWithReceiver(
-            @Param("requesterId") Long requesterId,
-            @Param("status") FriendshipStatus status
-    );
-
     @Query("SELECT f FROM Friendship f " +
-            "JOIN FETCH f.requester " +
-            "JOIN FETCH f.receiver " +
-            "WHERE (f.requester.id = :userId OR f.receiver.id = :userId) " +
-            "AND f.status = :status")
-    List<Friendship> findAllFriendsWithUsers(
-            @Param("userId") Long userId,
-            @Param("status") FriendshipStatus status
-    );
-
-    @Query("SELECT CASE WHEN COUNT(f) > 0 THEN true ELSE false END " +
-            "FROM Friendship f " +
             "WHERE (f.requester.id = :userA AND f.receiver.id = :userB) " +
             "OR (f.requester.id = :userB AND f.receiver.id = :userA)")
-    boolean existsFriendshipBetween(
-            @Param("userA") Long userA,
-            @Param("userB") Long userB
-    );
+    Optional<Friendship> findFriendshipBetween(@Param("userA") Long userA, @Param("userB") Long userB);
+
+    @Query("SELECT f FROM Friendship f " +
+            "JOIN FETCH f.requester JOIN FETCH f.receiver " +
+            "WHERE (f.requester.id = :userId OR f.receiver.id = :userId) " +
+            "AND f.status = 'FRIENDSHIP'")
+    List<Friendship> findAllFriendsWithUsers(@Param("userId") Long userId);
+
+    @Query("SELECT f FROM Friendship f JOIN FETCH f.requester " +
+            "WHERE f.receiver.id = :userId AND f.status = 'PENDING'")
+    List<Friendship> findReceivedRequests(@Param("userId") Long userId);
+
+    @Query("SELECT f FROM Friendship f JOIN FETCH f.receiver " +
+            "WHERE f.requester.id = :userId AND f.status = 'PENDING'")
+    List<Friendship> findSentRequests(@Param("userId") Long userId);
 
     @Query("SELECT COUNT(f) FROM Friendship f " +
             "WHERE (f.requester.id = :userId OR f.receiver.id = :userId) " +
-            "AND f.status = :status")
-    long countByUserIdAndStatus(@Param("userId") Long userId, @Param("status") FriendshipStatus status);
-
-    @Query("SELECT f FROM Friendship f " +
-            "WHERE ((f.requester.id = :userA AND f.receiver.id = :userB) OR (f.requester.id = :userB AND f.receiver.id = :userA)) " +
-            "AND f.status = :status")
-    Optional<Friendship> findFriendshipBetweenUsersByStatus(
-            @Param("userA") Long userA,
-            @Param("userB") Long userB,
-            @Param("status") FriendshipStatus status
-    );
+            "AND f.status = 'FRIENDSHIP'")
+    long countFriends(@Param("userId") Long userId);
 }
