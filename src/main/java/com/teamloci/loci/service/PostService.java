@@ -179,7 +179,7 @@ public class PostService {
         return results.stream()
                 .map(row -> {
                     String beaconId = (String) row[0];
-                    Long count = (Long) row[1];
+                    Long count = ((Number) row[1]).longValue();
                     String thumbnail = (String) row[2];
 
                     GeoUtils.Pair<Double, Double> latLng = geoUtils.beaconIdToLatLng(beaconId);
