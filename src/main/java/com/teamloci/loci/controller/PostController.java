@@ -2,27 +2,12 @@ package com.teamloci.loci.controller;
 
 import java.time.LocalDateTime;
 import java.util.List;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.teamloci.loci.dto.PostDto;
 import com.teamloci.loci.global.exception.CustomException;
 import com.teamloci.loci.global.exception.code.ErrorCode;
 import com.teamloci.loci.global.response.CustomResponse;
 import com.teamloci.loci.global.security.AuthenticatedUser;
 import com.teamloci.loci.service.PostService;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -33,8 +18,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "Post", description = "게시물(Loci) 및 지도/타임라인 API")
+@Tag(name = "Post", description = "게시물, 지도 타임라인, 피드 API")
 @RestController
 @RequestMapping("/api/v1/posts")
 @RequiredArgsConstructor
@@ -47,49 +36,86 @@ public class PostController {
         return user.getUserId();
     }
 
-    @Operation(summary = "[Post] 1. 포스트 생성",
-            description = "새로운 포스트를 작성합니다. `isArchived`가 `true`(기본값)이면 30일 후 자동으로 보관함으로 이동합니다.")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            content = @Content(examples = @ExampleObject(value = """
-                    {
-                      "mediaList": [
-                        { "mediaUrl": "https://s3.../img.webp", "mediaType": "IMAGE", "sortOrder": 1 }
-                      ],
-                      "collaboratorIds": [2, 3],
-                      "latitude": 37.5665,
-                      "longitude": 126.9780,
-                      "locationName": "서울시청",
-                      "isArchived": true
-                    }
-                    """))
-    )
+    @Operation(summary = "포스트 생성", description = "새로운 포스트를 작성합니다.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "생성 성공"),
-            @ApiResponse(responseCode = "404", description = "존재하지 않는 사용자(공동작업자)")
+            @ApiResponse(responseCode = "201", description = "생성 성공",
+                    content = @Content(examples = @ExampleObject(value = """
+                            {
+                              "timestamp": "2025-11-23T10:00:00",
+                              "isSuccess": true,
+                              "code": "COMMON201",
+                              "message": "성공적으로 객체를 생성했습니다.",
+                              "result": {
+                                "id": 101,
+                                "latitude": 37.5665,
+                                "longitude": 126.9780,
+                                "locationName": "스타벅스 강남점",
+                                "author": { "id": 1, "nickname": "내닉네임", "profileUrl": "https://s3.../me.jpg" },
+                                "mediaList": [{ "id": 50, "mediaUrl": "https://s3.../img.jpg", "mediaType": "IMAGE", "sortOrder": 1 }],
+                                "collaborators": [],
+                                "createdAt": "2025-11-23T10:00:00",
+                                "updatedAt": "2025-11-23T10:00:00",
+                                "isArchived": false
+                              }
+                            }
+                            """)))
     })
     @PostMapping
     public ResponseEntity<CustomResponse<PostDto.PostDetailResponse>> createPost(
             @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody PostDto.PostCreateRequest request
     ) {
-        Long authorId = getUserId(user);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(CustomResponse.created(postService.createPost(authorId, request)));
+                .body(CustomResponse.created(postService.createPost(getUserId(user), request)));
     }
 
-    @Operation(summary = "[Post] 2. 포스트 상세 조회", description = "ID로 포스트 상세 정보를 조회합니다.")
+    @Operation(summary = "포스트 상세 조회", description = "특정 포스트 ID로 상세 정보를 조회합니다.")
     @GetMapping("/{postId}")
     public ResponseEntity<CustomResponse<PostDto.PostDetailResponse>> getPost(@PathVariable Long postId) {
         return ResponseEntity.ok(CustomResponse.ok(postService.getPost(postId)));
     }
 
-    @Operation(summary = "[Post] 3. 유저별 포스트 목록", description = "특정 유저의 'ACTIVE' 상태인 포스트 목록을 최신순으로 조회합니다.")
+    @Operation(summary = "유저별 포스트 목록",
+            description = "특정 유저(userId)가 작성한 포스트들을 조회합니다. (예시: '즐거운판다' 유저가 작성한 글 목록)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(examples = @ExampleObject(value = """
+                            {
+                              "timestamp": "2025-11-23T10:05:00",
+                              "isSuccess": true,
+                              "code": "COMMON200",
+                              "message": "성공적으로 요청을 수행했습니다.",
+                              "result": [
+                                {
+                                  "id": 105,
+                                  "locationName": "한강공원",
+                                  "author": { "id": 5, "nickname": "즐거운판다", "profileUrl": "https://s3.../panda.jpg" },
+                                  "mediaList": [],
+                                  "createdAt": "2025-11-22T18:00:00",
+                                  "isArchived": false
+                                },
+                                {
+                                  "id": 98,
+                                  "locationName": "롯데타워",
+                                  "author": { "id": 5, "nickname": "즐거운판다", "profileUrl": "https://s3.../panda.jpg" },
+                                  "mediaList": [],
+                                  "createdAt": "2025-11-20T14:30:00",
+                                  "isArchived": true
+                                }
+                              ]
+                            }
+                            """)))
+    })
     @GetMapping("/user/{userId}")
     public ResponseEntity<CustomResponse<List<PostDto.PostDetailResponse>>> getPostsByUser(@PathVariable Long userId) {
         return ResponseEntity.ok(CustomResponse.ok(postService.getPostsByUser(userId)));
     }
 
-    @Operation(summary = "[Post] 4. 포스트 삭제", description = "포스트를 영구 삭제합니다.")
+    @Operation(summary = "포스트 삭제", description = "포스트를 삭제합니다. (작성자 본인만 가능)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "삭제 성공"),
+            @ApiResponse(responseCode = "403", description = "(POST403_1) 작성자가 아님")
+    })
     @DeleteMapping("/{postId}")
     public ResponseEntity<CustomResponse<Void>> deletePost(
             @AuthenticationPrincipal AuthenticatedUser user,
@@ -99,7 +125,7 @@ public class PostController {
         return ResponseEntity.ok(CustomResponse.ok(null));
     }
 
-    @Operation(summary = "[Post] 5. 포스트 수정", description = "포스트 내용 및 보관 설정(`isArchived`)을 수정합니다.")
+    @Operation(summary = "포스트 수정", description = "포스트 내용 및 보관 설정(`isArchived`)을 수정합니다.")
     @PatchMapping("/{postId}")
     public ResponseEntity<CustomResponse<PostDto.PostDetailResponse>> updatePost(
             @AuthenticationPrincipal AuthenticatedUser user,
@@ -109,46 +135,102 @@ public class PostController {
         return ResponseEntity.ok(CustomResponse.ok(postService.updatePost(getUserId(user), postId, request)));
     }
 
-    @Operation(summary = "[Post] 6. (Timeline) 비콘 기반 타임라인 조회",
-            description = """
-                지도에서 마커를 클릭했을 때, 해당 **비콘(Beacon ID)에 속한 포스트 목록**을 조회합니다.
-                `GET /map` API에서 얻은 `beaconId`를 그대로 전달하면 됩니다.
-                """)
+    @Operation(summary = "타임라인 (비콘별 조회)",
+            description = "지도에서 마커를 클릭했을 때, 해당 구역(Beacon)에 있는 포스트들을 조회합니다. (예시: 같은 장소에 여러 사람이 남긴 기록)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공",
-                    content = @Content(schema = @Schema(implementation = CustomResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "code": "COMMON200",
-                                      "result": [
-                                        { "id": 1, "beaconId": "89283082807ffff", "mediaList": [...], ... }
-                                      ]
-                                    }
-                                    """)))
+                    content = @Content(examples = @ExampleObject(value = """
+                            {
+                              "timestamp": "2025-11-23T10:10:00",
+                              "isSuccess": true,
+                              "code": "COMMON200",
+                              "message": "성공적으로 요청을 수행했습니다.",
+                              "result": [
+                                {
+                                  "id": 201,
+                                  "locationName": "강남역 11번 출구",
+                                  "author": { "id": 10, "nickname": "강남토박이", "profileUrl": null },
+                                  "createdAt": "2025-11-23T09:00:00",
+                                  "isArchived": false
+                                },
+                                {
+                                  "id": 202,
+                                  "locationName": "강남역",
+                                  "author": { "id": 3, "nickname": "지나가던사람", "profileUrl": null },
+                                  "createdAt":
+                                   "2025-11-23T08:50:00",
+                                  "isArchived": false
+                                }
+                              ]
+                            }
+                            """)))
     })
     @GetMapping("/timeline")
     public ResponseEntity<CustomResponse<List<PostDto.PostDetailResponse>>> getTimeline(
-            @Parameter(description = "조회할 비콘 ID (H3 Index)", required = true, example = "89283082807ffff") 
             @RequestParam String beaconId
     ) {
-        List<PostDto.PostDetailResponse> response = postService.getPostsByBeaconId(beaconId);
-        return ResponseEntity.ok(CustomResponse.ok(response));
+        return ResponseEntity.ok(CustomResponse.ok(postService.getPostsByBeaconId(beaconId)));
     }
-
-    @Operation(summary = "[Post] 7. (Map) 지도 범위 내 마커 조회",
-            description = "현재 지도 화면 범위(Bounding Box) 내에 있는 비콘들의 요약 정보(개수, 썸네일)를 반환합니다.")
+    @Operation(summary = "지도 마커 (범위 조회)", description = "지도 화면 내의 마커 정보를 반환합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(examples = @ExampleObject(value = """
+                            {
+                              "timestamp": "2025-11-23T10:15:00",
+                              "isSuccess": true,
+                              "code": "COMMON200",
+                              "message": "성공적으로 요청을 수행했습니다.",
+                              "result": [
+                                {
+                                  "beaconId": "89283082807ffff",
+                                  "latitude": 37.5665,
+                                  "longitude": 126.9780,
+                                  "count": 5,
+                                  "thumbnailImageUrl": "https://s3.../thumb1.jpg"
+                                },
+                                {
+                                  "beaconId": "8928308280bffff",
+                                  "latitude": 37.5700,
+                                  "longitude": 126.9800,
+                                  "count": 2,
+                                  "thumbnailImageUrl": "https://s3.../thumb2.jpg"
+                                }
+                              ]
+                            }
+                            """)))
+    })
     @GetMapping("/map")
     public ResponseEntity<CustomResponse<List<PostDto.MapMarkerResponse>>> getMapMarkers(
-            @Parameter(description = "SW Lat") @RequestParam Double minLat,
-            @Parameter(description = "NE Lat") @RequestParam Double maxLat,
-            @Parameter(description = "SW Lon") @RequestParam Double minLon,
-            @Parameter(description = "NE Lon") @RequestParam Double maxLon
+            @RequestParam Double minLat, @RequestParam Double maxLat,
+            @RequestParam Double minLon, @RequestParam Double maxLon
     ) {
         return ResponseEntity.ok(CustomResponse.ok(postService.getMapMarkers(minLat, maxLat, minLon, maxLon)));
     }
 
-    @Operation(summary = "[Post] 8. 친구 피드 조회 (무한 스크롤)",
-            description = "내 친구들의 최신 글을 조회합니다. `nextCursor`를 이용해 다음 페이지를 요청하세요.")
+    @Operation(summary = "친구 피드 (무한 스크롤)", description = "친구들의 최신 글을 모아봅니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(examples = @ExampleObject(value = """
+                            {
+                              "timestamp": "2025-11-23T10:20:00",
+                              "isSuccess": true,
+                              "code": "COMMON200",
+                              "message": "성공적으로 요청을 수행했습니다.",
+                              "result": {
+                                "posts": [
+                                  {
+                                    "id": 305,
+                                    "locationName": "친구네 집",
+                                    "author": { "id": 7, "nickname": "절친1", "profileUrl": "..." },
+                                    "createdAt": "2025-11-23T09:30:00"
+                                  }
+                                ],
+                                "hasNext": true,
+                                "nextCursor": "2025-11-23T09:30:00"
+                              }
+                            }
+                            """)))
+    })
     @GetMapping("/feed")
     public ResponseEntity<CustomResponse<PostDto.FeedResponse>> getFriendFeed(
             @AuthenticationPrincipal AuthenticatedUser user,

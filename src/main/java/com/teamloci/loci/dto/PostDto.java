@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.teamloci.loci.domain.MediaType;
 import com.teamloci.loci.domain.Post;
 import com.teamloci.loci.domain.PostCollaborator;
@@ -98,6 +99,7 @@ public class PostDto {
         private String locationName;
         
         @Schema(description = "30일 후 자동 보관 여부 설정 (true: 보관함 이동, false: 영구 게시). 미입력 시 기본값 true", example = "true")
+        @JsonProperty("isArchived")
         private Boolean isArchived;
     }
 
@@ -126,6 +128,7 @@ public class PostDto {
         @Schema(description = "마지막 수정 시간")
         private LocalDateTime updatedAt;
         @Schema(description = "30일 후 자동 보관 설정 여부")
+        @JsonProperty("isArchived")
         private boolean isArchived;
 
         public static PostDetailResponse from(Post post) {
