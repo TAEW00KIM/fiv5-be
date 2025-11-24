@@ -93,12 +93,37 @@ public class PostService {
         return PostDto.PostDetailResponse.from(post);
     }
 
-    public List<PostDto.PostDetailResponse> getPostsByUser(Long userId) {
-        List<Post> posts = postRepository.findByUserIdWithUser(userId);
+    public PostDto.FeedResponse getPostsByUser(Long targetUserId, LocalDateTime cursor, int size) {
+        if (!userRepository.existsById(targetUserId)) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
 
-        return posts.stream()
+        Pageable pageable = PageRequest.of(0, size + 1);
+
+        List<Post> posts;
+        if (cursor == null) {
+            posts = postRepository.findByUserIdFirstPage(targetUserId, pageable);
+        } else {
+            posts = postRepository.findByUserIdNextPage(targetUserId, cursor, pageable);
+        }
+
+        boolean hasNext = false;
+        if (posts.size() > size) {
+            hasNext = true;
+            posts.remove(size);
+        }
+
+        LocalDateTime nextCursor = posts.isEmpty() ? null : posts.get(posts.size() - 1).getCreatedAt();
+
+        List<PostDto.PostDetailResponse> postDtos = posts.stream()
                 .map(PostDto.PostDetailResponse::from)
                 .collect(Collectors.toList());
+
+        return PostDto.FeedResponse.builder()
+                .posts(postDtos)
+                .hasNext(hasNext)
+                .nextCursor(nextCursor)
+                .build();
     }
 
     @Transactional
