@@ -97,7 +97,7 @@ public class PostService {
         List<Post> posts = postRepository.findByUserIdWithUser(userId);
 
         return posts.stream()
-                .map(post -> getPost(post.getId()))
+                .map(PostDto.PostDetailResponse::from)
                 .collect(Collectors.toList());
     }
 
@@ -165,7 +165,7 @@ public class PostService {
         if (beaconId == null || beaconId.isBlank()) {
             return List.of();
         }
-        
+
         List<Post> posts = postRepository.findByBeaconId(beaconId);
 
         return posts.stream()
