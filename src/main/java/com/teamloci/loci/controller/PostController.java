@@ -42,7 +42,6 @@ public class PostController {
 
     private final PostService postService;
 
-    // 실제 CloudFront 도메인 적용 (예시용 상수, 실제 DTO에는 DB 값이 들어감)
     private static final String CDN_URL = "https://dagvorl6p9q6m.cloudfront.net";
 
     private Long getUserId(AuthenticatedUser user) {
@@ -50,13 +49,14 @@ public class PostController {
         return user.getUserId();
     }
 
-    @Operation(summary = "포스트 생성", description = "새로운 포스트를 작성합니다. 위경도를 보내면 서버에서 `beaconId`를 자동 계산하여 저장합니다.")
+    @Operation(summary = "포스트 생성",
+            description = "새로운 포스트를 작성합니다. 위경도를 보내면 서버에서 `beaconId`를 자동 계산하여 저장합니다.")
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             content = @Content(examples = @ExampleObject(value = """
                     {
                       "mediaList": [
                         { 
-                          "mediaUrl": "https://dagvorl6p9q6m.cloudfront.net/posts/a0bf6959-image.webp", 
+                          "mediaUrl": "https://dagvorl6p9q6m.cloudfront.net/posts/uuid_image.webp", 
                           "mediaType": "IMAGE", 
                           "sortOrder": 1 
                         }
@@ -91,7 +91,7 @@ public class PostController {
                                 },
                                 "mediaList": [{ 
                                   "id": 50, 
-                                  "mediaUrl": "https://dagvorl6p9q6m.cloudfront.net/posts/a0bf6959-image.webp", 
+                                  "mediaUrl": "https://dagvorl6p9q6m.cloudfront.net/posts/uuid_image.webp", 
                                   "mediaType": "IMAGE", 
                                   "sortOrder": 1 
                                 }],
@@ -242,7 +242,8 @@ public class PostController {
     @Operation(summary = "지도 마커 (범위 조회)",
             description = """
                     지도 화면 내의 마커 정보를 반환합니다. 
-                    `thumbnailImageUrl`은 CloudFront 리사이징 URL(`w300` 등)로 제공될 수 있습니다.
+                    `thumbnailImageUrl`은 필요 시 `/w300/` 경로를 사용하여 리사이징된 이미지를 요청할 수 있습니다.
+                    (예: `https://dagvorl6p9q6m.cloudfront.net/w300/posts/thumb1.jpg`)
                     """)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공",
