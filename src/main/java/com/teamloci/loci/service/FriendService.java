@@ -61,6 +61,8 @@ public class FriendService {
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (v1, v2) -> v1));
 
+        List<String> allPhoneNumbers = new ArrayList<>(newContactsMap.keySet());
+
         List<UserContact> existingContacts = userContactRepository.findByUserId(myUserId);
 
         List<UserContact> toDelete = existingContacts.stream()
@@ -88,7 +90,7 @@ public class FriendService {
                 .collect(Collectors.toList());
         userContactRepository.saveAll(toSave);
 
-        List<String> allPhoneHashes = newContactsMap.keySet().stream()
+        List<String> allPhoneHashes = allPhoneNumbers.stream()
                 .map(aesUtil::hash)
                 .collect(Collectors.toList());
 
