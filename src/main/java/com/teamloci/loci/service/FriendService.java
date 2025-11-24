@@ -88,8 +88,8 @@ public class FriendService {
                 .collect(Collectors.toList());
         userContactRepository.saveAll(toSave);
 
-        List<String> allPhoneHashes = userContactRepository.findByUserId(myUserId).stream()
-                .map(uc -> aesUtil.hash(uc.getPhoneNumber()))
+        List<String> allPhoneHashes = newContactsMap.keySet().stream()
+                .map(aesUtil::hash)
                 .collect(Collectors.toList());
 
         if (allPhoneHashes.isEmpty()) return List.of();
@@ -216,32 +216,33 @@ public class FriendService {
         List<Long> targetIds = foundUsers.stream().map(User::getId).collect(Collectors.toList());
         List<Friendship> friendships = friendshipRepository.findAllRelationsBetween(myUserId, targetIds);
 
+        Map<Long, Friendship> friendshipMap = friendships.stream()
+                .collect(Collectors.toMap(
+                        f -> f.getRequester().getId().equals(myUserId) ? f.getReceiver().getId() : f.getRequester().getId(),
+                        f -> f
+                ));
+
         List<UserDto.UserResponse> userDtos = foundUsers.stream()
                 .map(user -> {
-                    UserDto.UserResponse response = UserDto.UserResponse.from(user);
                     if (user.getId().equals(myUserId)) {
-                        response.setRelationStatus("SELF");
-                        return response;
+                        return UserDto.UserResponse.of(user, "SELF");
                     }
-                    Optional<Friendship> relation = friendships.stream()
-                            .filter(f -> f.getRequester().getId().equals(user.getId()) || f.getReceiver().getId().equals(user.getId()))
-                            .findFirst();
 
-                    if (relation.isEmpty()) {
-                        response.setRelationStatus("NONE");
-                    } else {
-                        Friendship f = relation.get();
-                        if (f.getStatus() == FriendshipStatus.FRIENDSHIP) {
-                            response.setRelationStatus("FRIEND");
+                    Friendship relation = friendshipMap.get(user.getId());
+                    String status = "NONE";
+
+                    if (relation != null) {
+                        if (relation.getStatus() == FriendshipStatus.FRIENDSHIP) {
+                            status = "FRIEND";
                         } else {
-                            if (f.getRequester().getId().equals(myUserId)) {
-                                response.setRelationStatus("PENDING_SENT");
+                            if (relation.getRequester().getId().equals(myUserId)) {
+                                status = "PENDING_SENT";
                             } else {
-                                response.setRelationStatus("PENDING_RECEIVED");
+                                status = "PENDING_RECEIVED";
                             }
                         }
                     }
-                    return response;
+                    return UserDto.UserResponse.of(user, status);
                 })
                 .collect(Collectors.toList());
 

@@ -27,7 +27,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -155,8 +154,8 @@ public class PostController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<CustomResponse<PostDto.FeedResponse>> getPostsByUser(
             @PathVariable Long userId,
-            @Parameter(description = "이전 페이지의 마지막 포스트 작성 시간") @RequestParam(required = false) LocalDateTime cursor,
-            @Parameter(description = "가져올 개수") @RequestParam(defaultValue = "10") int size
+            @Parameter(description = "커서 (Time,Id)") @RequestParam(required = false) String cursor,
+            @Parameter(description = "개수") @RequestParam(defaultValue = "10") int size
     ) {
         return ResponseEntity.ok(CustomResponse.ok(postService.getPostsByUser(userId, cursor, size)));
     }
@@ -169,7 +168,7 @@ public class PostController {
     @GetMapping("/me")
     public ResponseEntity<CustomResponse<PostDto.FeedResponse>> getMyPosts(
             @AuthenticationPrincipal AuthenticatedUser user,
-            @Parameter(description = "이전 페이지의 마지막 포스트 작성 시간") @RequestParam(required = false) LocalDateTime cursor,
+            @Parameter(description = "이전 페이지의 마지막 포스트 작성 시간") @RequestParam(required = false) String cursor,
             @Parameter(description = "가져올 개수") @RequestParam(defaultValue = "10") int size
     ) {
         Long myUserId = getUserId(user);
@@ -324,8 +323,8 @@ public class PostController {
     @GetMapping("/feed")
     public ResponseEntity<CustomResponse<PostDto.FeedResponse>> getFriendFeed(
             @AuthenticationPrincipal AuthenticatedUser user,
-            @Parameter(description = "이전 페이지의 마지막 포스트 작성 시간 (첫 요청 시 null)", example = "2024-11-24T12:00:00")
-            @RequestParam(required = false) LocalDateTime cursor,
+            @Parameter(description = "이전 페이지의 마지막 포스트 커서 (Time,Id)")
+            @RequestParam(required = false) String cursor, // [수정] LocalDateTime -> String
             @Parameter(description = "가져올 개수") @RequestParam(defaultValue = "10") int size
     ) {
         return ResponseEntity.ok(CustomResponse.ok(postService.getFriendFeed(getUserId(user), cursor, size)));
