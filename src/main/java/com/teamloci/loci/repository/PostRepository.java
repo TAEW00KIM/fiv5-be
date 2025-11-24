@@ -94,7 +94,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Query("SELECT DISTINCT p FROM Post p " +
             "LEFT JOIN FETCH p.user " +
-            "LEFT JOIN FETCH p.mediaList " +
             "WHERE (p.user.id = :myUserId OR p.user.id IN (" +
             "   SELECT f.receiver.id FROM Friendship f WHERE f.requester.id = :myUserId AND f.status = 'FRIENDSHIP' " +
             "   UNION " +
