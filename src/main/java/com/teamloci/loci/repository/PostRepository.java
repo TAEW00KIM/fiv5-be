@@ -32,9 +32,17 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             "LEFT JOIN FETCH p.user " +
             "LEFT JOIN FETCH p.mediaList " +
             "WHERE p.user.id = :userId AND p.status = 'ACTIVE' " +
-            "AND p.createdAt < :cursor " +
-            "ORDER BY p.createdAt DESC")
-    List<Post> findByUserIdNextPage(@Param("userId") Long userId, @Param("cursor") LocalDateTime cursor, Pageable pageable);
+            "AND (" +
+            "   p.createdAt < :cursorCreatedAt OR " +
+            "   (p.createdAt = :cursorCreatedAt AND p.id < :cursorId)" +
+            ") " +
+            "ORDER BY p.createdAt DESC, p.id DESC")
+    List<Post> findByUserIdNextPage(
+            @Param("userId") Long userId,
+            @Param("cursorCreatedAt") LocalDateTime cursorCreatedAt,
+            @Param("cursorId") Long cursorId,
+            Pageable pageable
+    );
 
     @Query(value = "SELECT p.beacon_id, COUNT(*), " +
             "(SELECT pm.media_url " +
@@ -63,31 +71,37 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             "ORDER BY p.createdAt DESC")
     List<Post> findByBeaconId(@Param("beaconId") String beaconId);
 
-    @Query("SELECT p FROM Post p " +
+    @Query("SELECT DISTINCT p FROM Post p " +
             "LEFT JOIN FETCH p.user " +
+            "LEFT JOIN FETCH p.mediaList " +
             "WHERE p.user.id IN (" +
-            "SELECT f.receiver.id FROM Friendship f WHERE f.requester.id = :myUserId AND f.status = 'FRIENDSHIP' " +
-            "UNION " +
-            "SELECT f.requester.id FROM Friendship f WHERE f.receiver.id = :myUserId AND f.status = 'FRIENDSHIP'" +
+            "   SELECT f.receiver.id FROM Friendship f WHERE f.requester.id = :myUserId AND f.status = 'FRIENDSHIP' " +
+            "   UNION " +
+            "   SELECT f.requester.id FROM Friendship f WHERE f.receiver.id = :myUserId AND f.status = 'FRIENDSHIP'" +
             ") " +
             "AND p.status = 'ACTIVE' " +
-            "AND p.createdAt < :lastCreatedAt " +
-            "ORDER BY p.createdAt DESC")
-    List<Post> findFriendPosts(
+            "AND (" +
+            "   p.createdAt < :cursorCreatedAt OR " +
+            "   (p.createdAt = :cursorCreatedAt AND p.id < :cursorId)" +
+            ") " +
+            "ORDER BY p.createdAt DESC, p.id DESC")
+    List<Post> findFriendPostsNextPage(
             @Param("myUserId") Long myUserId,
-            @Param("lastCreatedAt") LocalDateTime lastCreatedAt,
+            @Param("cursorCreatedAt") LocalDateTime cursorCreatedAt,
+            @Param("cursorId") Long cursorId,
             Pageable pageable
     );
 
-    @Query("SELECT p FROM Post p " +
+    @Query("SELECT DISTINCT p FROM Post p " +
             "LEFT JOIN FETCH p.user " +
+            "LEFT JOIN FETCH p.mediaList " +
             "WHERE p.user.id IN (" +
-            "SELECT f.receiver.id FROM Friendship f WHERE f.requester.id = :myUserId AND f.status = 'FRIENDSHIP' " +
-            "UNION " +
-            "SELECT f.requester.id FROM Friendship f WHERE f.receiver.id = :myUserId AND f.status = 'FRIENDSHIP'" +
+            "   SELECT f.receiver.id FROM Friendship f WHERE f.requester.id = :myUserId AND f.status = 'FRIENDSHIP' " +
+            "   UNION " +
+            "   SELECT f.requester.id FROM Friendship f WHERE f.receiver.id = :myUserId AND f.status = 'FRIENDSHIP'" +
             ") " +
             "AND p.status = 'ACTIVE' " +
-            "ORDER BY p.createdAt DESC")
+            "ORDER BY p.createdAt DESC, p.id DESC")
     List<Post> findFriendPostsFirstPage(
             @Param("myUserId") Long myUserId,
             Pageable pageable

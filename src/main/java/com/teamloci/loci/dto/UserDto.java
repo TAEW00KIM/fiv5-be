@@ -76,6 +76,7 @@ public class UserDto {
         @Schema(description = "나와의 관계 (NONE: 남, FRIEND: 친구, PENDING_SENT: 요청 보냄, PENDING_RECEIVED: 요청 받음, SELF: 나)", example = "FRIEND")
         private String relationStatus;
 
+
         public static UserResponse from(User user) {
             return new UserResponse(
                     user.getId(),
@@ -84,6 +85,17 @@ public class UserDto {
                     user.getProfileUrl(),
                     user.getCreatedAt(),
                     "NONE"
+            );
+        }
+
+        public static UserResponse of(User user, String relationStatus) {
+            return new UserResponse(
+                    user.getId(),
+                    user.getHandle(),
+                    user.getNickname(),
+                    user.getProfileUrl(),
+                    user.getCreatedAt(),
+                    relationStatus
             );
         }
     }
