@@ -21,17 +21,12 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             "WHERE p.id = :postId")
     Optional<Post> findByIdWithDetails(@Param("postId") Long postId);
 
-    @Query("SELECT p FROM Post p " +
+    @Query("SELECT DISTINCT p FROM Post p " +
             "LEFT JOIN FETCH p.user " +
+            "LEFT JOIN FETCH p.mediaList " +
             "WHERE p.user.id = :userId AND p.status = 'ACTIVE' " +
             "ORDER BY p.createdAt DESC")
     List<Post> findByUserIdWithUser(@Param("userId") Long userId);
-
-    @Query("SELECT p FROM Post p " +
-            "LEFT JOIN FETCH p.user " +
-            "WHERE p.beaconId = :beaconId AND p.status = 'ACTIVE' " +
-            "ORDER BY p.createdAt DESC")
-    List<Post> findByBeaconId(@Param("beaconId") String beaconId);
 
     @Query(value = "SELECT p.beacon_id, COUNT(*), " +
             "(SELECT pm.media_url " +
@@ -52,6 +47,13 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             @Param("minLon") Double minLon,
             @Param("maxLon") Double maxLon
     );
+
+    @Query("SELECT DISTINCT p FROM Post p " +
+            "LEFT JOIN FETCH p.user " +
+            "LEFT JOIN FETCH p.mediaList " +
+            "WHERE p.beaconId = :beaconId AND p.status = 'ACTIVE' " +
+            "ORDER BY p.createdAt DESC")
+    List<Post> findByBeaconId(@Param("beaconId") String beaconId);
 
     @Query("SELECT p FROM Post p " +
             "LEFT JOIN FETCH p.user " +
