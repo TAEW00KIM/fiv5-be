@@ -118,8 +118,11 @@ public class PostController {
         return ResponseEntity.ok(CustomResponse.ok(postService.getPost(postId)));
     }
 
-    @Operation(summary = "유저별 포스트 목록",
-            description = "특정 유저(userId)가 작성한 포스트들을 조회합니다.")
+    @Operation(summary = "유저별 포스트 목록 (무한 스크롤)",
+            description = """
+                    특정 유저(targetUserId)가 작성한 포스트들을 최신순으로 조회합니다.
+                    `cursor` 기반 페이지네이션을 지원합니다.
+                    """)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공",
                     content = @Content(examples = @ExampleObject(value = """
@@ -128,53 +131,49 @@ public class PostController {
                               "isSuccess": true,
                               "code": "COMMON200",
                               "message": "성공적으로 요청을 수행했습니다.",
-                              "result": [
-                                {
-                                  "id": 105,
-                                  "beaconId": "89283082807ffff",
-                                  "latitude": 37.5665,
-                                  "longitude": 126.9780,
-                                  "locationName": "한강공원",
-                                  "author": { 
-                                    "id": 5, 
-                                    "handle": "happy_panda", 
-                                    "nickname": "즐거운판다", 
-                                    "profileUrl": "https://dagvorl6p9q6m.cloudfront.net/w100/profiles/panda.jpg" 
-                                  },
-                                  "mediaList": [{
-                                    "id": 60,
-                                    "mediaUrl": "https://dagvorl6p9q6m.cloudfront.net/posts/river.jpg",
-                                    "mediaType": "IMAGE",
-                                    "sortOrder": 1
-                                  }],
-                                  "createdAt": "2025-11-24T10:00:00",
-                                  "updatedAt": "2025-11-24T10:00:00",
-                                  "isArchived": false
-                                },
-                                {
-                                  "id": 98,
-                                  "beaconId": "8928308280bffff",
-                                  "latitude": 37.5700,
-                                  "longitude": 126.9800,
-                                  "locationName": "롯데타워",
-                                  "author": { 
-                                    "id": 5, 
-                                    "handle": "happy_panda", 
-                                    "nickname": "즐거운판다", 
-                                    "profileUrl": "https://dagvorl6p9q6m.cloudfront.net/w100/profiles/panda.jpg" 
-                                  },
-                                  "mediaList": [],
-                                  "createdAt": "2025-11-23T14:30:00",
-                                  "updatedAt": "2025-11-23T14:30:00",
-                                  "isArchived": true
-                                }
-                              ]
+                              "result": {
+                                "posts": [
+                                  {
+                                    "id": 105,
+                                    "beaconId": "89283082807ffff",
+                                    "latitude": 37.5665,
+                                    "longitude": 126.9780,
+                                    "locationName": "한강공원",
+                                    "author": { "id": 5, "handle": "happy_panda", "nickname": "즐거운판다", "profileUrl": "..." },
+                                    "mediaList": [],
+                                    "createdAt": "2025-11-24T10:00:00",
+                                    "updatedAt": "2025-11-24T10:00:00",
+                                    "isArchived": false
+                                  }
+                                ],
+                                "hasNext": true,
+                                "nextCursor": "2025-11-24T10:00:00"
+                              }
                             }
                             """)))
     })
     @GetMapping("/user/{userId}")
-    public ResponseEntity<CustomResponse<List<PostDto.PostDetailResponse>>> getPostsByUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(CustomResponse.ok(postService.getPostsByUser(userId)));
+    public ResponseEntity<CustomResponse<PostDto.FeedResponse>> getPostsByUser(
+            @PathVariable Long userId,
+            @Parameter(description = "이전 페이지의 마지막 포스트 작성 시간") @RequestParam(required = false) LocalDateTime cursor,
+            @Parameter(description = "가져올 개수") @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(CustomResponse.ok(postService.getPostsByUser(userId, cursor, size)));
+    }
+
+    @Operation(summary = "내 포스트 모아보기 (무한 스크롤)",
+            description = """
+                    **로그인한 사용자 본인**이 작성한 포스트 목록을 조회합니다.
+                    `/user/{userId}` API를 내 ID로 호출하는 것과 동일합니다.
+                    """)
+    @GetMapping("/me")
+    public ResponseEntity<CustomResponse<PostDto.FeedResponse>> getMyPosts(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @Parameter(description = "이전 페이지의 마지막 포스트 작성 시간") @RequestParam(required = false) LocalDateTime cursor,
+            @Parameter(description = "가져올 개수") @RequestParam(defaultValue = "10") int size
+    ) {
+        Long myUserId = getUserId(user);
+        return ResponseEntity.ok(CustomResponse.ok(postService.getPostsByUser(myUserId, cursor, size)));
     }
 
     @Operation(summary = "타임라인 (비콘별 조회)",

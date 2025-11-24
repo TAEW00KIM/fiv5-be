@@ -26,7 +26,15 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             "LEFT JOIN FETCH p.mediaList " +
             "WHERE p.user.id = :userId AND p.status = 'ACTIVE' " +
             "ORDER BY p.createdAt DESC")
-    List<Post> findByUserIdWithUser(@Param("userId") Long userId);
+    List<Post> findByUserIdFirstPage(@Param("userId") Long userId, Pageable pageable);
+
+    @Query("SELECT DISTINCT p FROM Post p " +
+            "LEFT JOIN FETCH p.user " +
+            "LEFT JOIN FETCH p.mediaList " +
+            "WHERE p.user.id = :userId AND p.status = 'ACTIVE' " +
+            "AND p.createdAt < :cursor " +
+            "ORDER BY p.createdAt DESC")
+    List<Post> findByUserIdNextPage(@Param("userId") Long userId, @Param("cursor") LocalDateTime cursor, Pageable pageable);
 
     @Query(value = "SELECT p.beacon_id, COUNT(*), " +
             "(SELECT pm.media_url " +
@@ -88,7 +96,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Post p SET p.status = 'ARCHIVED' " +
             "WHERE p.status = 'ACTIVE' " +
-            "AND p.isArchived = true " +  
+            "AND p.isArchived = true " +
             "AND p.createdAt < :expiryDate")
     int archiveOldPosts(@Param("expiryDate") LocalDateTime expiryDate);
 }
