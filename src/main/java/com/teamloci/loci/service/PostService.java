@@ -94,7 +94,6 @@ public class PostService {
 
         Post savedPost = postRepository.save(post);
 
-        // [알림] DB 저장 및 FCM 발송
         sendPostNotifications(author, savedPost);
 
         PostDto.PostDetailResponse response = PostDto.PostDetailResponse.from(findPostById(savedPost.getId()));
@@ -187,8 +186,8 @@ public class PostService {
         return responses;
     }
 
-    public List<PostDto.MapMarkerResponse> getMapMarkers(Double minLat, Double maxLat, Double minLon, Double maxLon) {
-        List<Object[]> results = postRepository.findMapMarkers(minLat, maxLat, minLon, maxLon);
+    public List<PostDto.MapMarkerResponse> getMapMarkers(Double minLat, Double maxLat, Double minLon, Double maxLon, Long myUserId) {
+        List<Object[]> results = postRepository.findMapMarkers(minLat, maxLat, minLon, maxLon, myUserId);
 
         return results.stream()
                 .map(row -> {

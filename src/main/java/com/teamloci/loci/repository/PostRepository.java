@@ -62,18 +62,29 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             " JOIN posts p2 ON pm.post_id = p2.id " +
             " WHERE p2.beacon_id = p.beacon_id " +
             "   AND p2.status = 'ACTIVE' " +
+            "   AND (p2.user_id = :myUserId OR p2.user_id IN (" +
+            "       SELECT f.receiver_id FROM friendships f WHERE f.requester_id = :myUserId AND f.status = 'FRIENDSHIP' " +
+            "       UNION " +
+            "       SELECT f.requester_id FROM friendships f WHERE f.receiver_id = :myUserId AND f.status = 'FRIENDSHIP'" +
+            "   )) " +
             " ORDER BY p2.created_at DESC, pm.sort_order ASC " +
             " LIMIT 1) as thumbnail_url " +
             "FROM posts p " +
             "WHERE p.latitude BETWEEN :minLat AND :maxLat " +
             "AND p.longitude BETWEEN :minLon AND :maxLon " +
             "AND p.status = 'ACTIVE' " +
+            "AND (p.user_id = :myUserId OR p.user_id IN (" +
+            "   SELECT f.receiver_id FROM friendships f WHERE f.requester_id = :myUserId AND f.status = 'FRIENDSHIP' " +
+            "   UNION " +
+            "   SELECT f.requester_id FROM friendships f WHERE f.receiver_id = :myUserId AND f.status = 'FRIENDSHIP'" +
+            ")) " +
             "GROUP BY p.beacon_id", nativeQuery = true)
     List<Object[]> findMapMarkers(
             @Param("minLat") Double minLat,
             @Param("maxLat") Double maxLat,
             @Param("minLon") Double minLon,
-            @Param("maxLon") Double maxLon
+            @Param("maxLon") Double maxLon,
+            @Param("myUserId") Long myUserId
     );
 
     @Modifying(clearAutomatically = true)
