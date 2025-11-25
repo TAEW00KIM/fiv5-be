@@ -122,6 +122,19 @@ public class PostController {
         return ResponseEntity.ok(CustomResponse.ok(postService.getPost(postId, myUserId)));
     }
 
+    @Operation(summary = "내 포스트 목록 조회 (단축 URL)",
+            description = "내 포스트 목록을 조회합니다. `/api/v1/posts/user/{내ID}`와 동일하게 동작합니다.")
+    @GetMapping("/me")
+    public ResponseEntity<CustomResponse<PostDto.FeedResponse>> getMyPosts(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @Parameter(description = "이전 페이지의 마지막 포스트 ID (첫 요청 시 null)")
+            @RequestParam(required = false) Long cursor,
+            @Parameter(description = "가져올 개수") @RequestParam(defaultValue = "10") int size
+    ) {
+        Long myUserId = getUserId(user);
+        return ResponseEntity.ok(CustomResponse.ok(postService.getPostsByUser(myUserId, myUserId, cursor, size)));
+    }
+
     @Operation(summary = "유저별 포스트 목록 (무한 스크롤)",
             description = """
                     특정 유저(targetUserId)가 작성한 포스트들을 최신순으로 조회합니다.
