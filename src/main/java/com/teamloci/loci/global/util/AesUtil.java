@@ -11,6 +11,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Arrays;
 
@@ -19,6 +20,7 @@ public class AesUtil {
 
     private final SecretKeySpec secretKeySpec;
     private static final String ALGORITHM = "AES/CBC/PKCS5Padding";
+    private static final SecureRandom secureRandom = new SecureRandom();
 
     public AesUtil(@Value("${jwt.secret-key}") String secretKey) {
         byte[] key = secretKey.getBytes(StandardCharsets.UTF_8);
@@ -35,12 +37,19 @@ public class AesUtil {
     public String encrypt(String plainText) {
         if (plainText == null) return null;
         try {
-            Cipher cipher = Cipher.getInstance(ALGORITHM);
-            IvParameterSpec iv = new IvParameterSpec(new byte[16]);
+            byte[] ivBytes = new byte[16];
+            secureRandom.nextBytes(ivBytes);
+            IvParameterSpec iv = new IvParameterSpec(ivBytes);
 
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
             cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, iv);
+
             byte[] encrypted = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
-            return Base64.getEncoder().encodeToString(encrypted);
+
+            String ivString = Base64.getEncoder().encodeToString(ivBytes);
+            String encryptedString = Base64.getEncoder().encodeToString(encrypted);
+
+            return ivString + ":" + encryptedString;
         } catch (Exception e) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
@@ -49,12 +58,19 @@ public class AesUtil {
     public String decrypt(String encryptedText) {
         if (encryptedText == null) return null;
         try {
-            Cipher cipher = Cipher.getInstance(ALGORITHM);
-            IvParameterSpec iv = new IvParameterSpec(new byte[16]);
+            String[] parts = encryptedText.split(":");
+            if (parts.length != 2) {
+                throw new IllegalArgumentException("Invalid encrypted format");
+            }
 
+            byte[] ivBytes = Base64.getDecoder().decode(parts[0]);
+            byte[] cipherBytes = Base64.getDecoder().decode(parts[1]);
+
+            IvParameterSpec iv = new IvParameterSpec(ivBytes);
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
             cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, iv);
-            byte[] decoded = Base64.getDecoder().decode(encryptedText);
-            return new String(cipher.doFinal(decoded), StandardCharsets.UTF_8);
+
+            return new String(cipher.doFinal(cipherBytes), StandardCharsets.UTF_8);
         } catch (Exception e) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
