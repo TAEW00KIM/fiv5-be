@@ -96,10 +96,19 @@ public class FriendService {
 
         if (allPhoneHashes.isEmpty()) return List.of();
 
-        return userRepository.findByPhoneSearchHashIn(allPhoneHashes).stream()
+        List<User> matchedUsers = userRepository.findByPhoneSearchHashIn(allPhoneHashes).stream()
                 .filter(user -> !user.getId().equals(myUserId))
                 .filter(user -> user.getStatus() == UserStatus.ACTIVE)
-                .map(UserDto.UserResponse::from)
+                .collect(Collectors.toList());
+
+        List<Long> targetIds = matchedUsers.stream().map(User::getId).toList();
+        Map<Long, Friendship> friendshipMap = getFriendshipMap(myUserId, targetIds);
+
+        return matchedUsers.stream()
+                .map(user -> {
+                    String status = resolveRelationStatus(friendshipMap.get(user.getId()), myUserId);
+                    return UserDto.UserResponse.of(user, status);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -179,21 +188,21 @@ public class FriendService {
         return friendshipRepository.findAllFriendsWithUsers(myUserId)
                 .stream()
                 .map(f -> f.getRequester().getId().equals(myUserId) ? f.getReceiver() : f.getRequester())
-                .map(UserDto.UserResponse::from)
+                .map(user -> UserDto.UserResponse.of(user, "FRIEND"))
                 .collect(Collectors.toList());
     }
 
     public List<UserDto.UserResponse> getReceivedRequests(Long myUserId) {
         return friendshipRepository.findReceivedRequests(myUserId).stream()
                 .map(Friendship::getRequester)
-                .map(UserDto.UserResponse::from)
+                .map(user -> UserDto.UserResponse.of(user, "PENDING_RECEIVED"))
                 .collect(Collectors.toList());
     }
 
     public List<UserDto.UserResponse> getSentRequests(Long myUserId) {
         return friendshipRepository.findSentRequests(myUserId).stream()
                 .map(Friendship::getReceiver)
-                .map(UserDto.UserResponse::from)
+                .map(user -> UserDto.UserResponse.of(user, "PENDING_SENT"))
                 .collect(Collectors.toList());
     }
 
@@ -216,34 +225,14 @@ public class FriendService {
         Long nextCursor = foundUsers.isEmpty() ? null : foundUsers.get(foundUsers.size() - 1).getId();
 
         List<Long> targetIds = foundUsers.stream().map(User::getId).collect(Collectors.toList());
-        List<Friendship> friendships = friendshipRepository.findAllRelationsBetween(myUserId, targetIds);
-
-        Map<Long, Friendship> friendshipMap = friendships.stream()
-                .collect(Collectors.toMap(
-                        f -> f.getRequester().getId().equals(myUserId) ? f.getReceiver().getId() : f.getRequester().getId(),
-                        f -> f
-                ));
+        Map<Long, Friendship> friendshipMap = getFriendshipMap(myUserId, targetIds);
 
         List<UserDto.UserResponse> userDtos = foundUsers.stream()
                 .map(user -> {
                     if (user.getId().equals(myUserId)) {
                         return UserDto.UserResponse.of(user, "SELF");
                     }
-
-                    Friendship relation = friendshipMap.get(user.getId());
-                    String status = "NONE";
-
-                    if (relation != null) {
-                        if (relation.getStatus() == FriendshipStatus.FRIENDSHIP) {
-                            status = "FRIEND";
-                        } else {
-                            if (relation.getRequester().getId().equals(myUserId)) {
-                                status = "PENDING_SENT";
-                            } else {
-                                status = "PENDING_RECEIVED";
-                            }
-                        }
-                    }
+                    String status = resolveRelationStatus(friendshipMap.get(user.getId()), myUserId);
                     return UserDto.UserResponse.of(user, status);
                 })
                 .collect(Collectors.toList());
@@ -253,5 +242,25 @@ public class FriendService {
                 .hasNext(hasNext)
                 .nextCursor(nextCursor)
                 .build();
+    }
+
+    private Map<Long, Friendship> getFriendshipMap(Long myUserId, List<Long> targetIds) {
+        List<Friendship> friendships = friendshipRepository.findAllRelationsBetween(myUserId, targetIds);
+        return friendships.stream()
+                .collect(Collectors.toMap(
+                        f -> f.getRequester().getId().equals(myUserId) ? f.getReceiver().getId() : f.getRequester().getId(),
+                        f -> f
+                ));
+    }
+
+    private String resolveRelationStatus(Friendship friendship, Long myUserId) {
+        if (friendship == null) return "NONE";
+        if (friendship.getStatus() == FriendshipStatus.FRIENDSHIP) return "FRIEND";
+
+        if (friendship.getRequester().getId().equals(myUserId)) {
+            return "PENDING_SENT";
+        } else {
+            return "PENDING_RECEIVED";
+        }
     }
 }
