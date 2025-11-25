@@ -85,7 +85,7 @@ public class PostController {
                                   "handle": "my_handle", 
                                   "nickname": "내닉네임", 
                                   "profileUrl": "https://dagvorl6p9q6m.cloudfront.net/w100/profiles/me.jpg",
-                                  "createdAt: 날짜
+                                  "createdAt": "2025-11-24T12:00:00",
                                   "relationStatus": "SELF"
                                 },
                                 "mediaList": [{ 
@@ -97,7 +97,8 @@ public class PostController {
                                 "collaborators": [],
                                 "createdAt": "2025-11-24T12:00:00",
                                 "updatedAt": "2025-11-24T12:00:00",
-                                "isArchived": true
+                                "isArchived": true,
+                                "commentCount": 0
                               }
                             }
                             """)))
@@ -163,13 +164,14 @@ public class PostController {
                                       "handle": "happy_panda", 
                                       "nickname": "즐거운판다", 
                                       "profileUrl": "...",
-                                      "createdAt: "날짜",
+                                      "createdAt": "2025-11-24T10:00:00",
                                       "relationStatus": "FRIEND"
                                     },
                                     "mediaList": [],
                                     "createdAt": "2025-11-24T10:00:00",
                                     "updatedAt": "2025-11-24T10:00:00",
-                                    "isArchived": false
+                                    "isArchived": false,
+                                    "commentCount": 3
                                   }
                                 ],
                                 "hasNext": true,
@@ -195,58 +197,6 @@ public class PostController {
                     지도 마커 클릭 시 해당 구역(Beacon)의 포스트를 조회합니다.
                     작성자가 친구가 아니더라도 조회될 수 있으며, `relationStatus`로 구분 가능합니다.
                     """)
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "조회 성공",
-                    content = @Content(examples = @ExampleObject(value = """
-                            {
-                              "timestamp": "2025-11-24T12:10:00",
-                              "isSuccess": true,
-                              "code": "COMMON200",
-                              "message": "성공적으로 요청을 수행했습니다.",
-                              "result": [
-                                {
-                                  "id": 201,
-                                  "beaconId": "89283082807ffff",
-                                  "locationName": "강남역 11번 출구",
-                                  "author": { 
-                                    "id": 10, 
-                                    "handle": "gangnam_local", 
-                                    "nickname": "강남토박이", 
-                                    "profileUrl": null,
-                                    "createdAt": "날짜",
-                                    "relationStatus": "NONE"
-                                  },
-                                  "mediaList": [{
-                                    "id": 70,
-                                    "mediaUrl": "https://dagvorl6p9q6m.cloudfront.net/posts/gangnam.jpg",
-                                    "mediaType": "IMAGE",
-                                    "sortOrder": 1
-                                  }],
-                                  "createdAt": "2025-11-23T09:00:00",
-                                  "updatedAt": "2025-11-23T09:00:00",
-                                  "isArchived": false
-                                },
-                                {
-                                  "id": 202,
-                                  "beaconId": "89283082807ffff",
-                                  "locationName": "강남역",
-                                  "author": { 
-                                    "id": 3, 
-                                    "handle": "passerby", 
-                                    "nickname": "지나가던사람", 
-                                    "profileUrl": null,
-                                    "createdAt": "날짜",
-                                    "relationStatus": "FRIEND"
-                                  },
-                                  "mediaList": [],
-                                  "createdAt": "2025-11-23T08:50:00",
-                                  "updatedAt": "2025-11-23T08:50:00",
-                                  "isArchived": false
-                                }
-                              ]
-                            }
-                            """)))
-    })
     @GetMapping("/timeline")
     public ResponseEntity<CustomResponse<List<PostDto.PostDetailResponse>>> getTimeline(
             @AuthenticationPrincipal AuthenticatedUser user,
@@ -261,6 +211,8 @@ public class PostController {
             description = """
                     지도 화면 내의 마커 정보를 반환합니다. 
                     `thumbnailImageUrl`은 CloudFront 리사이징 URL(`w300` 등)로 제공될 수 있습니다.
+                    
+                    * **필터링:** 나와 내 친구의 'ACTIVE' 상태인 게시물만 집계합니다.
                     """)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공",
@@ -284,54 +236,17 @@ public class PostController {
     })
     @GetMapping("/map")
     public ResponseEntity<CustomResponse<List<PostDto.MapMarkerResponse>>> getMapMarkers(
+            @AuthenticationPrincipal AuthenticatedUser user, // [추가] 사용자 정보
             @Parameter(description = "SW 위도") @RequestParam Double minLat,
             @Parameter(description = "NE 위도") @RequestParam Double maxLat,
             @Parameter(description = "SW 경도") @RequestParam Double minLon,
             @Parameter(description = "NE 경도") @RequestParam Double maxLon
     ) {
-        return ResponseEntity.ok(CustomResponse.ok(postService.getMapMarkers(minLat, maxLat, minLon, maxLon)));
+        // [수정] 내 ID를 서비스로 전달
+        return ResponseEntity.ok(CustomResponse.ok(postService.getMapMarkers(minLat, maxLat, minLon, maxLon, getUserId(user))));
     }
 
     @Operation(summary = "친구 피드 (무한 스크롤)", description = "친구들의 최신 글을 모아봅니다. **ID 기반 커서**를 사용합니다.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "조회 성공",
-                    content = @Content(examples = @ExampleObject(value = """
-                            {
-                              "timestamp": "2025-11-24T12:20:00",
-                              "isSuccess": true,
-                              "code": "COMMON200",
-                              "message": "성공적으로 요청을 수행했습니다.",
-                              "result": {
-                                "posts": [
-                                  {
-                                    "id": 305,
-                                    "beaconId": "89283082807ffff",
-                                    "locationName": "친구네 집",
-                                    "author": { 
-                                      "id": 7, 
-                                      "handle": "best_friend", 
-                                      "nickname": "절친1", 
-                                      "profileUrl": "https://dagvorl6p9q6m.cloudfront.net/profiles/friend.jpg?w=100",
-                                      "createdAt": "날짜",
-                                      "relationStatus": "FRIEND"
-                                    },
-                                    "mediaList": [{
-                                      "id": 80,
-                                      "mediaUrl": "https://dagvorl6p9q6m.cloudfront.net/posts/party.jpg",
-                                      "mediaType": "IMAGE",
-                                      "sortOrder": 1
-                                    }],
-                                    "createdAt": "2025-11-24T09:30:00",
-                                    "updatedAt": "2025-11-24T09:30:00",
-                                    "isArchived": false
-                                  }
-                                ],
-                                "hasNext": true,
-                                "nextCursor": 290
-                              }
-                            }
-                            """)))
-    })
     @GetMapping("/feed")
     public ResponseEntity<CustomResponse<PostDto.FeedResponse>> getFriendFeed(
             @AuthenticationPrincipal AuthenticatedUser user,
