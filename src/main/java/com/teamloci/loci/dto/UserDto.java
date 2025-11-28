@@ -49,7 +49,6 @@ public class UserDto {
     @Schema(description = "FCM 토큰 갱신 요청")
     public static class FcmTokenUpdateRequest {
         @Schema(description = "새로운 FCM 기기 토큰", required = true, example = "fcm_token_string...")
-        @NotBlank(message = "FCM 토큰이 필요합니다.")
         private String fcmToken;
     }
 
