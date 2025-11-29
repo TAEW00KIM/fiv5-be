@@ -142,6 +142,10 @@ public class NotificationService {
 
             if (response.getFailureCount() > 0) {
                 log.warn("FCM 일부 발송 실패: {}건 성공, {}건 실패", response.getSuccessCount(), response.getFailureCount());
+
+                response.getResponses().stream()
+                        .filter(r -> !r.isSuccessful())
+                        .forEach(r -> log.error("FCM 전송 실패 원인: {}", r.getException().getMessage()));
             }
 
         } catch (Exception e) {
