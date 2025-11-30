@@ -56,12 +56,14 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
         """, nativeQuery = true)
     List<Object[]> countFriendsByUserIds(@Param("userIds") List<Long> userIds);
 
-    @Query("SELECT CASE WHEN f.requester.id = :userId THEN f.receiver ELSE f.requester END " +
-            "FROM Friendship f " +
-            "JOIN f.requester req " +
-            "JOIN f.receiver res " +
-            "WHERE (req.id = :userId OR res.id = :userId) " +
+    @Query("SELECT f.receiver FROM Friendship f " +
+            "WHERE f.requester.id = :userId " +
             "AND f.status = 'FRIENDSHIP' " +
-            "AND (CASE WHEN req.id = :userId THEN res.status ELSE req.status END) = 'ACTIVE'")
+            "AND f.receiver.status = 'ACTIVE' " +
+            "UNION " +
+            "SELECT f.requester FROM Friendship f " +
+            "WHERE f.receiver.id = :userId " +
+            "AND f.status = 'FRIENDSHIP' " +
+            "AND f.requester.status = 'ACTIVE'")
     List<User> findAllActiveFriends(@Param("userId") Long userId);
 }
