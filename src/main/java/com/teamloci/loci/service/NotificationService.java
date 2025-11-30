@@ -1,5 +1,6 @@
 package com.teamloci.loci.service;
 
+import com.google.firebase.FirebaseApp; // [추가] 앱 정보 확인용
 import com.google.firebase.messaging.*;
 import com.teamloci.loci.domain.Notification;
 import com.teamloci.loci.domain.NotificationType;
@@ -119,7 +120,13 @@ public class NotificationService {
 
             FirebaseMessaging.getInstance().send(message);
         } catch (Exception e) {
-            log.error("FCM 발송 실패: {}", e.getMessage());
+            // [디버깅 강화]
+            log.error(">>> [FCM Single Send Error] <<<");
+            log.error("Active Project ID: {}", FirebaseApp.getInstance().getOptions().getProjectId());
+            log.error("Service Account: {}", FirebaseApp.getInstance().getOptions().getServiceAccountId());
+            log.error("Target Token: {}", token);
+            log.error("Exception Message: {}", e.getMessage());
+            log.error("Full StackTrace: ", e);
         }
     }
 
@@ -141,15 +148,25 @@ public class NotificationService {
             BatchResponse response = FirebaseMessaging.getInstance().sendEachForMulticast(message);
 
             if (response.getFailureCount() > 0) {
-                log.warn("FCM 일부 발송 실패: {}건 성공, {}건 실패", response.getSuccessCount(), response.getFailureCount());
+                // [디버깅 강화]
+                log.warn(">>> [FCM Multicast Partial Failure] <<<");
+                log.warn("Success: {}, Failure: {}", response.getSuccessCount(), response.getFailureCount());
+                log.warn("Active Project ID: {}", FirebaseApp.getInstance().getOptions().getProjectId());
 
-                response.getResponses().stream()
-                        .filter(r -> !r.isSuccessful())
-                        .forEach(r -> log.error("FCM 전송 실패 원인: {}", r.getException().getMessage()));
+                List<SendResponse> responses = response.getResponses();
+                for (int i = 0; i < responses.size(); i++) {
+                    SendResponse r = responses.get(i);
+                    if (!r.isSuccessful()) {
+                        log.error("--- Failure Detail (Index: {}) ---", i);
+                        log.error("Target Token: {}", tokens.get(i));
+                        log.error("Reason: {}", r.getException().getMessage());
+                        // 401 Unauthorized가 뜬다면, 위 'Active Project ID' 로그가 핵심 단서가 됩니다.
+                    }
+                }
             }
 
         } catch (Exception e) {
-            log.error("FCM Multicast 실패: {}", e.getMessage());
+            log.error(">>> [FCM Multicast Exception] <<<", e);
         }
     }
 
@@ -166,7 +183,11 @@ public class NotificationService {
                     .build();
             FirebaseMessaging.getInstance().send(message);
         } catch (Exception e) {
-            log.error("DM FCM 발송 실패", e);
+            // [디버깅 강화]
+            log.error(">>> [DM FCM Send Error] <<<");
+            log.error("Active Project ID: {}", FirebaseApp.getInstance().getOptions().getProjectId());
+            log.error("Target Token: {}", targetFcmToken);
+            log.error("Exception: ", e);
         }
     }
 }
