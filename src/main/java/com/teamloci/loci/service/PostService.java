@@ -6,7 +6,7 @@ import com.teamloci.loci.dto.UserDto;
 import com.teamloci.loci.global.exception.CustomException;
 import com.teamloci.loci.global.exception.code.ErrorCode;
 import com.teamloci.loci.global.util.GeoUtils;
-import com.teamloci.loci.global.util.RelationUtil; // [추가]
+import com.teamloci.loci.global.util.RelationUtil;
 import com.teamloci.loci.repository.FriendshipRepository;
 import com.teamloci.loci.repository.PostCommentRepository;
 import com.teamloci.loci.repository.PostRepository;
