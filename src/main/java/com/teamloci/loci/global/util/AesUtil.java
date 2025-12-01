@@ -1,7 +1,7 @@
 package com.teamloci.loci.global.util;
 
-import com.teamloci.loci.global.exception.CustomException;
-import com.teamloci.loci.global.exception.code.ErrorCode;
+import com.teamloci.loci.global.error.CustomException;
+import com.teamloci.loci.global.error.ErrorCode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 

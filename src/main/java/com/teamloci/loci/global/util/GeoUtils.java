@@ -1,8 +1,8 @@
 package com.teamloci.loci.global.util;
 
 import com.uber.h3core.H3Core;
-import com.teamloci.loci.global.exception.CustomException;
-import com.teamloci.loci.global.exception.code.ErrorCode;
+import com.teamloci.loci.global.error.CustomException;
+import com.teamloci.loci.global.error.ErrorCode;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;

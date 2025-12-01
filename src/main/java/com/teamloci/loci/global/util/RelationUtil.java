@@ -1,7 +1,7 @@
 package com.teamloci.loci.global.util;
 
-import com.teamloci.loci.domain.Friendship;
-import com.teamloci.loci.domain.FriendshipStatus;
+import com.teamloci.loci.domain.friend.Friendship;
+import com.teamloci.loci.domain.friend.FriendshipStatus;
 
 public class RelationUtil {
 
