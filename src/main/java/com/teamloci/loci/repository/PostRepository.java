@@ -87,6 +87,15 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             @Param("myUserId") Long myUserId
     );
 
+    @Query("SELECT p FROM Post p " +
+            "LEFT JOIN FETCH p.mediaList " +
+            "WHERE p.id IN (" +
+            "  SELECT MAX(p2.id) FROM Post p2 " +
+            "  WHERE p2.user.id IN :userIds AND p2.status = 'ACTIVE' " +
+            "  GROUP BY p2.user.id" +
+            ")")
+    List<Post> findLatestPostsByUserIds(@Param("userIds") List<Long> userIds);
+
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Post p SET p.status = 'ARCHIVED' " +
             "WHERE p.status = 'ACTIVE' " +
