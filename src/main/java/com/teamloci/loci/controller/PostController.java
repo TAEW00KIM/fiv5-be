@@ -228,6 +228,19 @@ public class PostController {
         return ResponseEntity.ok(CustomResponse.ok(postService.getMapMarkers(minLat, maxLat, minLon, maxLon, getUserId(user))));
     }
 
+    @Operation(summary = "지도 마커 (Time Mode)",
+            description = """
+                    **Time 모드용 API**입니다.
+                    * 지도 범위와 상관없이 **내 모든 친구들의 가장 최신 게시글 위치**를 반환합니다.
+                    * 각 친구당 1개의 마커(게시글)만 반환됩니다.
+                    """)
+    @GetMapping("/map/friends")
+    public ResponseEntity<CustomResponse<List<PostDto.MapMarkerResponse>>> getFriendMapMarkers(
+            @AuthenticationPrincipal AuthenticatedUser user
+    ) {
+        return ResponseEntity.ok(CustomResponse.ok(postService.getFriendMapMarkers(getUserId(user))));
+    }
+
     @Operation(summary = "친구 피드 (무한 스크롤)", description = "친구들의 최신 글을 모아봅니다. **ID 기반 커서**를 사용합니다.")
     @GetMapping("/feed")
     public ResponseEntity<CustomResponse<PostDto.FeedResponse>> getFriendFeed(

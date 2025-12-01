@@ -214,6 +214,30 @@ public class PostService {
                 .collect(Collectors.toList());
     }
 
+    public List<PostDto.MapMarkerResponse> getFriendMapMarkers(Long myUserId) {
+        List<User> friends = friendshipRepository.findActiveFriendsByUserId(myUserId);
+        if (friends.isEmpty()) {
+            return List.of();
+        }
+        List<Long> friendIds = friends.stream().map(User::getId).toList();
+
+        List<Post> posts = postRepository.findLatestPostsByUserIds(friendIds);
+
+        return posts.stream()
+                .map(p -> {
+                    String thumbnail = p.getMediaList().isEmpty() ? null : p.getMediaList().get(0).getMediaUrl();
+
+                    return PostDto.MapMarkerResponse.builder()
+                            .beaconId(p.getBeaconId())
+                            .latitude(p.getLatitude())
+                            .longitude(p.getLongitude())
+                            .count(1L)
+                            .thumbnailImageUrl(thumbnail)
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
     public PostDto.FeedResponse getFriendFeed(Long myUserId, Long cursorId, int size) {
         Pageable pageable = PageRequest.of(0, size + 1);
         List<Post> posts = postRepository.findFriendPostsWithCursor(myUserId, cursorId, pageable);
