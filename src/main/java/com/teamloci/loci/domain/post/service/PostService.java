@@ -62,6 +62,14 @@ public class PostService {
 
         String beaconId = geoUtils.latLngToBeaconId(request.getLatitude(), request.getLongitude());
 
+        String thumbnailUrl = null;
+        if (request.getMediaList() != null && !request.getMediaList().isEmpty()) {
+            thumbnailUrl = request.getMediaList().stream()
+                    .min(Comparator.comparingInt(PostDto.MediaRequest::getSortOrder))
+                    .map(PostDto.MediaRequest::getMediaUrl)
+                    .orElse(null);
+        }
+
         Post post = Post.builder()
                 .user(author)
                 .latitude(request.getLatitude())
@@ -69,6 +77,7 @@ public class PostService {
                 .locationName(request.getLocationName())
                 .beaconId(beaconId)
                 .isArchived(request.getIsArchived())
+                .thumbnailUrl(thumbnailUrl)
                 .build();
 
         if (request.getMediaList() != null) {
@@ -157,12 +166,21 @@ public class PostService {
 
         String beaconId = geoUtils.latLngToBeaconId(request.getLatitude(), request.getLongitude());
 
+        String thumbnailUrl = null;
+        if (request.getMediaList() != null && !request.getMediaList().isEmpty()) {
+            thumbnailUrl = request.getMediaList().stream()
+                    .min(Comparator.comparingInt(PostDto.MediaRequest::getSortOrder))
+                    .map(PostDto.MediaRequest::getMediaUrl)
+                    .orElse(null);
+        }
+
         post.update(
                 request.getLatitude(),
                 request.getLongitude(),
                 request.getLocationName(),
                 beaconId,
-                request.getIsArchived()
+                request.getIsArchived(),
+                thumbnailUrl
         );
 
         post.clearMedia();
@@ -238,7 +256,7 @@ public class PostService {
 
         return posts.stream()
                 .map(p -> {
-                    String thumbnail = p.getMediaList().isEmpty() ? null : p.getMediaList().get(0).getMediaUrl();
+                    String thumbnail = p.getThumbnailUrl();
 
                     return PostDto.MapMarkerResponse.builder()
                             .beaconId(p.getBeaconId())
@@ -252,8 +270,19 @@ public class PostService {
     }
 
     public PostDto.FeedResponse getFriendFeed(Long myUserId, Long cursorId, int size) {
+
+        List<User> friends = friendshipRepository.findActiveFriendsByUserId(myUserId);
+
+        List<Long> targetUserIds = new ArrayList<>();
+        targetUserIds.add(myUserId);
+
+        for (User friend : friends) {
+            targetUserIds.add(friend.getId());
+        }
+
         Pageable pageable = PageRequest.of(0, size + 1);
-        List<Post> posts = postRepository.findFriendPostsWithCursor(myUserId, cursorId, pageable);
+        List<Post> posts = postRepository.findByUserIdInWithCursor(targetUserIds, cursorId, pageable);
+
         return makeFeedResponse(posts, size, myUserId);
     }
 

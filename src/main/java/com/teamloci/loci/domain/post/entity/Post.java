@@ -67,6 +67,9 @@ public class Post extends BaseTimeEntity {
     @Column(name = "beacon_id", nullable = false, length = 64)
     private String beaconId;
 
+    @Column(name = "thumbnail_url", columnDefinition = "TEXT")
+    private String thumbnailUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PostStatus status;
@@ -75,14 +78,15 @@ public class Post extends BaseTimeEntity {
     private boolean isArchived; 
 
     @Builder
-    public Post(User user, Double latitude, Double longitude, String locationName, String beaconId, Boolean isArchived) {
+    public Post(User user, Double latitude, Double longitude, String locationName, String beaconId, Boolean isArchived, String thumbnailUrl) {
         this.user = user;
         this.latitude = latitude;
         this.longitude = longitude;
         this.locationName = locationName;
         this.beaconId = beaconId;
         this.status = PostStatus.ACTIVE;
-        this.isArchived = (isArchived != null) ? isArchived : true; 
+        this.isArchived = (isArchived != null) ? isArchived : true;
+        this.thumbnailUrl = thumbnailUrl;
     }
 
     public void addMedia(PostMedia media) {
@@ -103,7 +107,7 @@ public class Post extends BaseTimeEntity {
         this.collaborators.clear();
     }
 
-    public void update(Double latitude, Double longitude, String locationName, String beaconId, Boolean isArchived) {
+    public void update(Double latitude, Double longitude, String locationName, String beaconId, Boolean isArchived, String thumbnailUrl) {
         this.latitude = latitude;
         this.longitude = longitude;
         this.locationName = locationName;
@@ -111,5 +115,6 @@ public class Post extends BaseTimeEntity {
         if (isArchived != null) {
             this.isArchived = isArchived;
         }
+        this.thumbnailUrl = thumbnailUrl;
     }
 }

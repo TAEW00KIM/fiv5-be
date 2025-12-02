@@ -39,35 +39,32 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             Pageable pageable
     );
 
-    @Query("SELECT DISTINCT p FROM Post p " +
-            "LEFT JOIN FETCH p.user " +
-            "WHERE (p.user.id = :myUserId OR p.user.id IN (" +
-            "   SELECT f.receiver.id FROM Friendship f WHERE f.requester.id = :myUserId AND f.status = 'FRIENDSHIP' " +
-            "   UNION " +
-            "   SELECT f.requester.id FROM Friendship f WHERE f.receiver.id = :myUserId AND f.status = 'FRIENDSHIP'" +
-            ")) " +
+    @Query("SELECT p FROM Post p " +
+            "JOIN FETCH p.user " +
+            "WHERE p.user.id IN :userIds " +
             "AND p.status = 'ACTIVE' " +
             "AND (:cursorId IS NULL OR p.id < :cursorId) " +
             "ORDER BY p.id DESC")
-    List<Post> findFriendPostsWithCursor(
-            @Param("myUserId") Long myUserId,
+    List<Post> findByUserIdInWithCursor(
+            @Param("userIds") List<Long> userIds,
             @Param("cursorId") Long cursorId,
             Pageable pageable
     );
 
     @Query(value = "SELECT p.beacon_id, COUNT(*), " +
-            "(SELECT pm.media_url " +
-            " FROM post_media pm " +
-            " JOIN posts p2 ON pm.post_id = p2.id " +
-            " WHERE p2.beacon_id = p.beacon_id " +
+            "(" +
+            "   SELECT p2.thumbnail_url " +
+            "   FROM posts p2 " +
+            "   WHERE p2.beacon_id = p.beacon_id " +
             "   AND p2.status = 'ACTIVE' " +
             "   AND (p2.user_id = :myUserId OR p2.user_id IN (" +
             "       SELECT f.receiver_id FROM friendships f WHERE f.requester_id = :myUserId AND f.status = 'FRIENDSHIP' " +
             "       UNION " +
             "       SELECT f.requester_id FROM friendships f WHERE f.receiver_id = :myUserId AND f.status = 'FRIENDSHIP'" +
             "   )) " +
-            " ORDER BY p2.created_at DESC, pm.sort_order ASC " +
-            " LIMIT 1) as thumbnail_url " +
+            "   ORDER BY p2.id DESC " +
+            "   LIMIT 1" +
+            ") as thumbnail_url " +
             "FROM posts p " +
             "WHERE p.latitude BETWEEN :minLat AND :maxLat " +
             "AND p.longitude BETWEEN :minLon AND :maxLon " +
