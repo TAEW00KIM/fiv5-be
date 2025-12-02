@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@Transactional
 public class LociTimeManager {
 
     private final TaskScheduler taskScheduler;
