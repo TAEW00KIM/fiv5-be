@@ -35,11 +35,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> searchByKeywordWithCursor(@Param("keyword") String keyword, @Param("cursor") Long cursor, Pageable pageable);
 
     @Query("SELECT u FROM User u WHERE u.status = 'ACTIVE' AND u.fcmToken IS NOT NULL AND u.fcmToken <> ''")
-    List<User> findActiveUsersWithFcmToken();
+    Slice<User> findActiveUsersWithFcmToken(Pageable pageable);
 
     @Query("SELECT u FROM User u WHERE u.status = 'ACTIVE' " +
             "AND u.fcmToken IS NOT NULL AND u.fcmToken <> '' " +
             "AND u.id NOT IN :excludedIds")
-    List<User> findActiveUsersWithFcmTokenExcludingIds(@Param("excludedIds") List<Long> excludedIds);
-
+    Slice<User> findActiveUsersWithFcmTokenExcludingIds(@Param("excludedIds") List<Long> excludedIds, Pageable pageable);
 }
