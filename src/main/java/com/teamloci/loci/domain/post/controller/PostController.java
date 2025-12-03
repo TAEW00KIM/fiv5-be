@@ -103,7 +103,8 @@ public class PostController {
                                 "createdAt": "2025-11-24T12:00:00",
                                 "updatedAt": "2025-11-24T12:00:00",
                                 "isArchived": true,
-                                "commentCount": 0
+                                "commentCount": 0,
+                                "reactionCount": 0
                               }
                             }
                             """)))
@@ -187,7 +188,8 @@ public class PostController {
                                     "createdAt": "2025-11-24T10:00:00",
                                     "updatedAt": "2025-11-24T10:00:00",
                                     "isArchived": false,
-                                    "commentCount": 3
+                                    "commentCount": 3,
+                                    "reactionCount": 15
                                   }
                                 ],
                                 "hasNext": true,
