@@ -25,7 +25,7 @@ public class CommentDto {
     @Getter
     @Builder
     @AllArgsConstructor
-    @Schema(description = "댓글 응답")
+    @Schema(name = "CommentResponse", description = "댓글 응답")
     public static class Response {
         @Schema(description = "댓글 ID", example = "10")
         private Long id;
@@ -52,7 +52,7 @@ public class CommentDto {
     @Getter
     @Builder
     @AllArgsConstructor
-    @Schema(description = "댓글 목록 (커서 기반)")
+    @Schema(name = "CommentListResponse", description = "댓글 목록 (커서 기반)")
     public static class ListResponse {
         @Schema(description = "댓글 데이터 목록")
         private List<Response> comments;

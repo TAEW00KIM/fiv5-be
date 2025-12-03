@@ -39,6 +39,7 @@ public class NotificationDto {
     @Getter
     @Builder
     @AllArgsConstructor
+    @Schema(name = "NotificationListResponse")
     public static class ListResponse {
         private List<Response> notifications;
         private boolean hasNext;

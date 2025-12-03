@@ -45,7 +45,7 @@ public class ReactionDto {
     @Getter
     @Builder
     @AllArgsConstructor
-    @Schema(description = "리액션 목록 응답 (무한 스크롤)")
+    @Schema(name = "ReactionListResponse", description = "리액션 목록 응답 (무한 스크롤)")
     public static class ListResponse {
         private List<Response> reactions;
         private boolean hasNext;
