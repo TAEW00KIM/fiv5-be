@@ -12,6 +12,9 @@ import java.util.Optional;
 public interface PostReactionRepository extends JpaRepository<PostReaction, Long> {
     Optional<PostReaction> findByPostIdAndUserId(Long postId, Long userId);
 
+    @Query("SELECT r FROM PostReaction r JOIN FETCH r.user WHERE r.post.id = :postId AND r.user.id = :userId")
+    Optional<PostReaction> findByPostIdAndUserIdWithUser(@Param("postId") Long postId, @Param("userId") Long userId);
+
     @Query("SELECT r.post.id, r.type, COUNT(r) FROM PostReaction r WHERE r.post.id IN :postIds GROUP BY r.post.id, r.type")
     List<Object[]> countReactionsByPostIds(@Param("postIds") List<Long> postIds);
 

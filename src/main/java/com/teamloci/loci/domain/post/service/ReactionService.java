@@ -84,7 +84,7 @@ public class ReactionService {
         List<PostReaction> resultList = new ArrayList<>();
 
         if (cursorId == null) {
-            postReactionRepository.findByPostIdAndUserId(postId, myUserId)
+            postReactionRepository.findByPostIdAndUserIdWithUser(postId, myUserId)
                     .ifPresent(resultList::add);
         }
 
