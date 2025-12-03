@@ -24,17 +24,17 @@ public class ReactionDto {
         @Schema(description = "반응 타입")
         private ReactionType type;
 
-        @Schema(description = "반응 남긴 유저 정보")
+        @Schema(description = "반응 남긴 유저 정보 (관계 및 통계 포함)")
         private UserDto.UserResponse user;
 
         @Schema(description = "반응 남긴 시간")
         private LocalDateTime createdAt;
 
-        public static Response from(PostReaction reaction) {
+        public static Response of(PostReaction reaction, UserDto.UserResponse userResponse) {
             return Response.builder()
                     .id(reaction.getId())
                     .type(reaction.getType())
-                    .user(UserDto.UserResponse.from(reaction.getUser()))
+                    .user(userResponse)
                     .createdAt(reaction.getCreatedAt())
                     .build();
         }
