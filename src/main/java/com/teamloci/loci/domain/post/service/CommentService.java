@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,6 +36,8 @@ public class CommentService {
     private final UserRepository userRepository;
     private final FriendshipRepository friendshipRepository;
     private final NotificationService notificationService;
+
+    private static final Pattern MENTION_PATTERN = Pattern.compile("@([a-z0-9._]+)");
 
     @Transactional
     public CommentDto.Response createComment(Long userId, Long postId, CommentDto.CreateRequest request) {
@@ -48,16 +52,15 @@ public class CommentService {
                 .post(post)
                 .content(request.getContent())
                 .build();
-
         PostComment savedComment = commentRepository.save(comment);
 
-        User postOwner = post.getUser();
-        if (!postOwner.getId().equals(userId)) {
+        Set<Long> mentionedUserIds = sendMentionNotifications(user, post, request.getContent());
 
-            String commentContent = savedComment.getContent();
-            String summary = commentContent.length() > 20
-                    ? commentContent.substring(0, 20) + "..."
-                    : commentContent;
+        User postOwner = post.getUser();
+        if (!postOwner.getId().equals(userId) && !mentionedUserIds.contains(postOwner.getId())) {
+            String summary = request.getContent().length() > 20
+                    ? request.getContent().substring(0, 20) + "..."
+                    : request.getContent();
 
             notificationService.send(
                     postOwner,
@@ -72,6 +75,35 @@ public class CommentService {
         long postCount = postRepository.countByUserIdAndStatus(userId, PostStatus.ACTIVE);
 
         return CommentDto.Response.of(savedComment, "SELF", friendCount, postCount);
+    }
+
+    private Set<Long> sendMentionNotifications(User sender, Post post, String content) {
+        Set<String> handles = new HashSet<>();
+        Matcher matcher = MENTION_PATTERN.matcher(content);
+
+        while (matcher.find()) {
+            handles.add(matcher.group(1));
+        }
+
+        if (handles.isEmpty()) return Collections.emptySet();
+
+        List<User> mentionedUsers = userRepository.findByHandleIn(new ArrayList<>(handles));
+        Set<Long> notifiedUserIds = new HashSet<>();
+
+        mentionedUsers.stream()
+                .filter(u -> !u.getId().equals(sender.getId()))
+                .forEach(target -> {
+                    notificationService.send(
+                            target,
+                            NotificationType.COMMENT_MENTION,
+                            "회원님을 언급했습니다",
+                            sender.getNickname() + "님이 댓글에서 회원님을 언급했습니다: " + content,
+                            post.getId()
+                    );
+                    notifiedUserIds.add(target.getId()); 
+                });
+
+        return notifiedUserIds;
     }
 
     public CommentDto.ListResponse getComments(Long myUserId, Long postId, Long cursorId, int size) {
