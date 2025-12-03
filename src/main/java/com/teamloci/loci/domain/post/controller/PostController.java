@@ -333,7 +333,7 @@ public class PostController {
             @Parameter(description = "가져올 개수") @RequestParam(defaultValue = "20") int size
     ) {
         return ResponseEntity.ok(CustomResponse.ok(
-                reactionService.getReactions(postId, cursorId, size)
+                reactionService.getReactions(getUserId(user), postId, cursorId, size)
         ));
     }
 }
