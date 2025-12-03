@@ -1,5 +1,6 @@
 package com.teamloci.loci.domain.post.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.teamloci.loci.domain.post.entity.PostReaction;
 import com.teamloci.loci.domain.post.entity.ReactionType;
 import com.teamloci.loci.domain.user.UserDto;
@@ -16,13 +17,14 @@ public class ReactionDto {
     @Getter
     @Builder
     @AllArgsConstructor
-    @Schema(description = "리액션 상세 정보 (유저 포함)")
+    @Schema(name = "ReactionResponse", description = "리액션 상세 정보 (유저 포함)")
     public static class Response {
         @Schema(description = "리액션 ID")
         private Long id;
 
         @Schema(description = "반응 타입 (이모지 종류)", example = "LIKE")
-        private ReactionType reactionType;
+        @JsonProperty("reactionType")
+        private ReactionType type;
 
         @Schema(description = "반응 남긴 유저 정보 (관계 및 통계 포함)")
         private UserDto.UserResponse user;
@@ -33,7 +35,7 @@ public class ReactionDto {
         public static Response of(PostReaction reaction, UserDto.UserResponse userResponse) {
             return Response.builder()
                     .id(reaction.getId())
-                    .reactionType(reaction.getType())
+                    .type(reaction.getType())
                     .user(userResponse)
                     .createdAt(reaction.getCreatedAt())
                     .build();
