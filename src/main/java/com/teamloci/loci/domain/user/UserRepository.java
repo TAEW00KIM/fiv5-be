@@ -41,4 +41,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
             "AND u.fcmToken IS NOT NULL AND u.fcmToken <> '' " +
             "AND u.id NOT IN :excludedIds")
     Slice<User> findActiveUsersWithFcmTokenExcludingIds(@Param("excludedIds") List<Long> excludedIds, Pageable pageable);
+
+    List<User> findByHandleIn(List<String> handles);
 }

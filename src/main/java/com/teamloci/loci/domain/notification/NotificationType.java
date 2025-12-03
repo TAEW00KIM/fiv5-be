@@ -10,4 +10,5 @@ public enum NotificationType {
     COMMENT_LIKE,
     POST_REACTION,
     LOCI_TIME,
+    COMMENT_MENTION,
 }
