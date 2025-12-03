@@ -40,7 +40,7 @@ public class PostService {
     private final UserRepository userRepository;
     private final FriendshipRepository friendshipRepository;
     private final PostCommentRepository commentRepository;
-    private final PostReactionRepository reactionRepository; // [New]
+    private final PostReactionRepository reactionRepository;
     private final NotificationService notificationService;
     private final DailyPushLogRepository dailyPushLogRepository;
     private final GeoUtils geoUtils;
@@ -338,7 +338,6 @@ public class PostService {
 
         for (PostDto.PostDetailResponse p : posts) {
             postIds.add(p.getId());
-
             targetUserIds.add(p.getUser().getId());
             if (p.getCollaborators() != null) {
                 p.getCollaborators().forEach(c -> targetUserIds.add(c.getId()));
@@ -353,7 +352,6 @@ public class PostService {
             Long pid = (Long) row[0];
             ReactionType type = (ReactionType) row[1];
             Long count = (Long) row[2];
-
             reactionCounts.computeIfAbsent(pid, k -> new HashMap<>()).put(type, count);
         });
 
@@ -363,15 +361,14 @@ public class PostService {
         });
 
         Map<Long, Long> friendCountMap = new HashMap<>();
+        Map<Long, Long> postCountMap = new HashMap<>();
+
         if (!targetUserIds.isEmpty()) {
-            friendshipRepository.countFriendsByUserIds(new ArrayList<>(targetUserIds)).forEach(row ->
+            List<Long> userIdList = new ArrayList<>(targetUserIds);
+            friendshipRepository.countFriendsByUserIds(userIdList).forEach(row ->
                     friendCountMap.put(((Number) row[0]).longValue(), ((Number) row[1]).longValue())
             );
-        }
-
-        Map<Long, Long> postCountMap = new HashMap<>();
-        if (!targetUserIds.isEmpty()) {
-            postRepository.countPostsByUserIds(new ArrayList<>(targetUserIds), PostStatus.ACTIVE).forEach(row ->
+            postRepository.countPostsByUserIds(userIdList, PostStatus.ACTIVE).forEach(row ->
                     postCountMap.put((Long) row[0], (Long) row[1])
             );
         }
@@ -394,10 +391,17 @@ public class PostService {
         for (PostDto.PostDetailResponse p : posts) {
             p.setCommentCount(commentCountMap.getOrDefault(p.getId(), 0L));
 
+            Map<ReactionType, Long> postReactions = reactionCounts.getOrDefault(p.getId(), Collections.emptyMap());
+
             p.setReactions(new PostDto.ReactionSummary(
                     myReactions.get(p.getId()),
-                    reactionCounts.getOrDefault(p.getId(), Collections.emptyMap())
+                    postReactions
             ));
+
+            long totalReactions = postReactions.values().stream()
+                    .mapToLong(Long::longValue)
+                    .sum();
+            p.setReactionCount(totalReactions);
 
             fillUserInfo(p.getUser(), myUserId, friendshipMap, friendCountMap, postCountMap);
 

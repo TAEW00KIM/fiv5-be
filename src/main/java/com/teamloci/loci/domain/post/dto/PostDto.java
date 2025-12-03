@@ -131,6 +131,9 @@ public class PostDto {
         @Schema(description = "이 게시물의 총 댓글 수", example = "5")
         private Long commentCount;
 
+        @Schema(description = "이 게시물의 총 반응(이모지) 수", example = "15")
+        private Long reactionCount;
+
         @Schema(description = "반응(이모지) 요약 정보")
         private ReactionSummary reactions;
 
@@ -153,6 +156,7 @@ public class PostDto {
                     .updatedAt(post.getUpdatedAt())
                     .isArchived(post.isArchived())
                     .commentCount(0L)
+                    .reactionCount(0L)
                     .build();
         }
     }
