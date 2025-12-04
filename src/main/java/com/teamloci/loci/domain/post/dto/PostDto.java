@@ -206,6 +206,12 @@ public class PostDto {
         @Schema(description = "비콘 ID", example = "89283082807ffff")
         private String beaconId;
 
+        @Schema(description = "비콘 중심 위도", example = "37.5665")
+        private Double latitude;
+
+        @Schema(description = "비콘 중심 경도", example = "126.9780")
+        private Double longitude;
+
         @Schema(description = "대표 장소명 (가장 최근 게시물 기준)", example = "서울시청")
         private String locationName;
 
