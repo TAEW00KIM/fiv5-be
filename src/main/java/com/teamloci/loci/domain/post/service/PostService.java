@@ -491,10 +491,16 @@ public class PostService {
 
         return results.stream()
                 .map(row -> {
+                    String beaconId = (String) row[0];
+
+                    GeoUtils.Pair<Double, Double> latLng = geoUtils.beaconIdToLatLng(beaconId);
+
                     java.sql.Timestamp timestamp = (java.sql.Timestamp) row[4];
 
                     return PostDto.VisitedPlaceResponse.builder()
-                            .beaconId((String) row[0])
+                            .beaconId(beaconId)
+                            .latitude(latLng != null ? latLng.lat : null)
+                            .longitude(latLng != null ? latLng.lng : null)
                             .locationName((String) row[1])
                             .postCount(((Number) row[2]).longValue())
                             .thumbnailUrl((String) row[3])
