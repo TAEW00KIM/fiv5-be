@@ -240,4 +240,44 @@ public class PostDto {
         @Schema(description = "총 방문한 친구 수", example = "5")
         private Long totalCount;
     }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Schema(description = "친구 지도 마커 상세 응답 (User + Beacon + Post 그룹화)")
+    public static class FriendMapMarkerResponse {
+        @Schema(description = "작성자(친구) 정보")
+        private UserDto.UserResponse user;
+
+        @Schema(description = "비콘(위치) 정보")
+        private BeaconInfo beacon;
+
+        @Schema(description = "게시글 요약 정보")
+        private PostInfo post;
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class BeaconInfo {
+        @Schema(description = "비콘 ID", example = "89283082807ffff")
+        private String id;
+        @Schema(description = "위도", example = "37.5665")
+        private Double latitude;
+        @Schema(description = "경도", example = "126.9780")
+        private Double longitude;
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class PostInfo {
+        @Schema(description = "게시글 ID", example = "100")
+        private Long id;
+        @Schema(description = "썸네일 URL", example = "https://cdn.../image.jpg")
+        private String thumbnailUrl;
+    }
 }

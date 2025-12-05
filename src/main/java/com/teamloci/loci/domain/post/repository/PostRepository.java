@@ -25,31 +25,30 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("SELECT DISTINCT p FROM Post p " +
             "LEFT JOIN FETCH p.user " +
             "LEFT JOIN FETCH p.mediaList " +
-            "WHERE p.beaconId = :beaconId AND p.status = 'ACTIVE' " +
+            "WHERE p.beaconId = :beaconId " +
+            "AND ( " +
+            "   (p.user.id = :myUserId AND (p.status = 'ACTIVE' OR p.status = 'ARCHIVED')) " +
+            "   OR " +
+            "   (p.user.id IN :friendIds AND p.status = 'ACTIVE') " +
+            ") " +
             "ORDER BY p.id DESC")
-    List<Post> findByBeaconId(@Param("beaconId") String beaconId);
+    List<Post> findTimelinePosts(@Param("beaconId") String beaconId,
+                                 @Param("myUserId") Long myUserId,
+                                 @Param("friendIds") List<Long> friendIds);
 
     @Query("SELECT DISTINCT p FROM Post p " +
             "LEFT JOIN FETCH p.user " +
             "WHERE p.user.id = :userId AND p.status = 'ACTIVE' " +
             "AND (:cursorId IS NULL OR p.id < :cursorId) " +
             "ORDER BY p.id DESC")
-    List<Post> findByUserIdWithCursor(
-            @Param("userId") Long userId,
-            @Param("cursorId") Long cursorId,
-            Pageable pageable
-    );
+    List<Post> findByUserIdWithCursor(@Param("userId") Long userId, @Param("cursorId") Long cursorId, Pageable pageable);
 
     @Query("SELECT DISTINCT p FROM Post p " +
             "LEFT JOIN FETCH p.user " +
             "WHERE p.user.id = :userId AND p.status = 'ARCHIVED' " +
             "AND (:cursorId IS NULL OR p.id < :cursorId) " +
             "ORDER BY p.id DESC")
-    List<Post> findArchivedPostsByUserIdWithCursor(
-            @Param("userId") Long userId,
-            @Param("cursorId") Long cursorId,
-            Pageable pageable
-    );
+    List<Post> findArchivedPostsByUserIdWithCursor(@Param("userId") Long userId, @Param("cursorId") Long cursorId, Pageable pageable);
 
     @Query("SELECT p FROM Post p " +
             "JOIN FETCH p.user " +
@@ -57,18 +56,14 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             "AND p.status = 'ACTIVE' " +
             "AND (:cursorId IS NULL OR p.id < :cursorId) " +
             "ORDER BY p.id DESC")
-    List<Post> findByUserIdInWithCursor(
-            @Param("userIds") List<Long> userIds,
-            @Param("cursorId") Long cursorId,
-            Pageable pageable
-    );
+    List<Post> findByUserIdInWithCursor(@Param("userIds") List<Long> userIds, @Param("cursorId") Long cursorId, Pageable pageable);
 
     @Query(value = "SELECT p.beacon_id, COUNT(*), " +
             "(" +
             "   SELECT p2.thumbnail_url " +
             "   FROM posts p2 " +
             "   WHERE p2.beacon_id = p.beacon_id " +
-            "   AND p2.status = 'ACTIVE' " +
+            "   AND (p2.status = 'ACTIVE' OR (p2.user_id = :myUserId AND p2.status = 'ARCHIVED')) " +
             "   AND (p2.user_id = :myUserId OR p2.user_id IN (" +
             "       SELECT f.receiver_id FROM friendships f WHERE f.requester_id = :myUserId AND f.status = 'FRIENDSHIP' " +
             "       UNION " +
@@ -80,7 +75,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             "FROM posts p " +
             "WHERE p.latitude BETWEEN :minLat AND :maxLat " +
             "AND p.longitude BETWEEN :minLon AND :maxLon " +
-            "AND p.status = 'ACTIVE' " +
+            "AND (p.status = 'ACTIVE' OR (p.user_id = :myUserId AND p.status = 'ARCHIVED')) " +
             "AND (p.user_id = :myUserId OR p.user_id IN (" +
             "   SELECT f.receiver_id FROM friendships f WHERE f.requester_id = :myUserId AND f.status = 'FRIENDSHIP' " +
             "   UNION " +
@@ -88,10 +83,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             ")) " +
             "GROUP BY p.beacon_id", nativeQuery = true)
     List<Object[]> findMapMarkers(
-            @Param("minLat") Double minLat,
-            @Param("maxLat") Double maxLat,
-            @Param("minLon") Double minLon,
-            @Param("maxLon") Double maxLon,
+            @Param("minLat") Double minLat, @Param("maxLat") Double maxLat,
+            @Param("minLon") Double minLon, @Param("maxLon") Double maxLon,
             @Param("myUserId") Long myUserId
     );
 
@@ -104,20 +97,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             ")")
     List<Post> findLatestPostsByUserIds(@Param("userIds") List<Long> userIds);
 
-    @Modifying(clearAutomatically = true)
-    @Query("UPDATE Post p SET p.status = 'ARCHIVED' " +
-            "WHERE p.status = 'ACTIVE' " +
-            "AND p.isArchived = true " +
-            "AND p.createdAt < :expiryDate")
-    int archiveOldPosts(@Param("expiryDate") LocalDateTime expiryDate);
-
-    long countByUserIdAndStatus(Long userId, PostStatus status);
-
-    @Query("SELECT p.user.id, COUNT(p) FROM Post p " +
-            "WHERE p.user.id IN :userIds AND p.status = :status " +
-            "GROUP BY p.user.id")
-    List<Object[]> countPostsByUserIds(@Param("userIds") List<Long> userIds, @Param("status") PostStatus status);
-
     @Query(value = """
         WITH RankedPosts AS (
             SELECT
@@ -129,7 +108,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                 ROW_NUMBER() OVER (PARTITION BY p.beacon_id ORDER BY p.created_at DESC, p.id DESC) as rn
             FROM posts p
             WHERE p.user_id = :userId 
-              AND p.status = 'ACTIVE'
+              AND (p.status = 'ACTIVE' OR p.status = 'ARCHIVED')
         )
         SELECT beacon_id, location_name, cnt, thumbnail_url, created_at
         FROM RankedPosts
@@ -137,10 +116,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
         ORDER BY created_at DESC
         LIMIT :limit OFFSET :offset
         """, nativeQuery = true)
-    List<Object[]> findVisitedPlacesByUserId(@Param("userId") Long userId,
-                                             @Param("limit") int limit,
-                                             @Param("offset") int offset);
-
+    List<Object[]> findVisitedPlacesByUserId(@Param("userId") Long userId, @Param("limit") int limit, @Param("offset") int offset);
 
     @Query("""
         SELECT DISTINCT p.user 
@@ -157,5 +133,19 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("SELECT COUNT(DISTINCT p.user) FROM Post p WHERE p.beaconId IN :beaconIds AND p.user.id IN :friendIds AND p.status = 'ACTIVE'")
     Long countFriendsInBeacons(@Param("beaconIds") List<String> beaconIds, @Param("friendIds") List<Long> friendIds);
 
-    boolean existsByBeaconIdInAndUserIdAndStatus(List<String> beaconIds, Long userId, PostStatus status);
+    boolean existsByBeaconIdInAndUserId(List<String> beaconIds, Long userId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Post p SET p.status = 'ARCHIVED' " +
+            "WHERE p.status = 'ACTIVE' " +
+            "AND p.isArchived = true " +
+            "AND p.createdAt < :expiryDate")
+    int archiveOldPosts(@Param("expiryDate") LocalDateTime expiryDate);
+
+    long countByUserIdAndStatus(Long userId, PostStatus status);
+
+    @Query("SELECT p.user.id, COUNT(p) FROM Post p " +
+            "WHERE p.user.id IN :userIds AND p.status = :status " +
+            "GROUP BY p.user.id")
+    List<Object[]> countPostsByUserIds(@Param("userIds") List<Long> userIds, @Param("status") PostStatus status);
 }

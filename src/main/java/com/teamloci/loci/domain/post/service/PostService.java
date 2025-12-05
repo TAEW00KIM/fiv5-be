@@ -234,7 +234,15 @@ public class PostService {
     public List<PostDto.PostDetailResponse> getPostsByBeaconId(String beaconId, Long myUserId) {
         if (beaconId == null || beaconId.isBlank()) return List.of();
 
-        List<Post> posts = postRepository.findByBeaconId(beaconId);
+        List<User> friends = friendshipRepository.findActiveFriendsByUserId(myUserId);
+        List<Long> friendIds = friends.stream().map(User::getId).collect(Collectors.toList());
+
+        if (friendIds.isEmpty()) {
+            friendIds.add(-1L);
+        }
+
+        List<Post> posts = postRepository.findTimelinePosts(beaconId, myUserId, friendIds);
+
         List<PostDto.PostDetailResponse> responses = posts.stream()
                 .map(PostDto.PostDetailResponse::from)
                 .collect(Collectors.toList());
@@ -268,7 +276,7 @@ public class PostService {
                 .collect(Collectors.toList());
     }
 
-    public List<PostDto.MapMarkerResponse> getFriendMapMarkers(Long myUserId) {
+    public List<PostDto.FriendMapMarkerResponse> getFriendMapMarkers(Long myUserId) {
         List<User> friends = friendshipRepository.findActiveFriendsByUserId(myUserId);
         if (friends.isEmpty()) {
             return List.of();
@@ -279,14 +287,20 @@ public class PostService {
 
         return posts.stream()
                 .map(p -> {
-                    String thumbnail = p.getThumbnailUrl();
+                    UserDto.UserResponse userResp = UserDto.UserResponse.from(p.getUser());
+                    userResp.setRelationStatus("FRIEND");
 
-                    return PostDto.MapMarkerResponse.builder()
-                            .beaconId(p.getBeaconId())
-                            .latitude(p.getLatitude())
-                            .longitude(p.getLongitude())
-                            .count(1L)
-                            .thumbnailImageUrl(thumbnail)
+                    return PostDto.FriendMapMarkerResponse.builder()
+                            .user(userResp)
+                            .beacon(PostDto.BeaconInfo.builder()
+                                    .id(p.getBeaconId())
+                                    .latitude(p.getLatitude())
+                                    .longitude(p.getLongitude())
+                                    .build())
+                            .post(PostDto.PostInfo.builder()
+                                    .id(p.getId())
+                                    .thumbnailUrl(p.getThumbnailUrl())
+                                    .build())
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -514,9 +528,7 @@ public class PostService {
         String centerBeaconId = geoUtils.latLngToBeaconId(latitude, longitude);
         List<String> targetBeaconIds = geoUtils.getHexagonNeighbors(centerBeaconId);
 
-        boolean isVisitedByMe = postRepository.existsByBeaconIdInAndUserIdAndStatus(
-                targetBeaconIds, myUserId, PostStatus.ACTIVE
-        );
+        boolean isVisitedByMe = postRepository.existsByBeaconIdInAndUserId(targetBeaconIds, myUserId);
 
         List<User> friends = friendshipRepository.findActiveFriendsByUserId(myUserId);
         if (friends.isEmpty()) {
