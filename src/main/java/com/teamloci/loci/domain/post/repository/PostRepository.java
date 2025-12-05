@@ -38,10 +38,16 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Query("SELECT DISTINCT p FROM Post p " +
             "LEFT JOIN FETCH p.user " +
-            "WHERE p.user.id = :userId AND p.status = 'ACTIVE' " +
+            "WHERE p.user.id = :userId " +
+            "AND p.status IN :statuses " +
             "AND (:cursorId IS NULL OR p.id < :cursorId) " +
             "ORDER BY p.id DESC")
-    List<Post> findByUserIdWithCursor(@Param("userId") Long userId, @Param("cursorId") Long cursorId, Pageable pageable);
+    List<Post> findByUserIdAndStatusInWithCursor(
+            @Param("userId") Long userId,
+            @Param("statuses") List<PostStatus> statuses,
+            @Param("cursorId") Long cursorId,
+            Pageable pageable
+    );
 
     @Query("SELECT DISTINCT p FROM Post p " +
             "LEFT JOIN FETCH p.user " +
