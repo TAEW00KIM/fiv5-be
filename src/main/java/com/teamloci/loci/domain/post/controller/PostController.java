@@ -247,10 +247,10 @@ public class PostController {
             description = """
                     **Time 모드용 API**입니다.
                     * 지도 범위와 상관없이 **내 모든 친구들의 가장 최신 게시글 위치**를 반환합니다.
-                    * 각 친구당 1개의 마커(게시글)만 반환됩니다.
+                    * 각 친구당 1개의 마커(게시글)만 반환되며, **User/Beacon/Post** 정보가 구조화되어 응답됩니다.
                     """)
     @GetMapping("/map/friends")
-    public ResponseEntity<CustomResponse<List<PostDto.MapMarkerResponse>>> getFriendMapMarkers(
+    public ResponseEntity<CustomResponse<List<PostDto.FriendMapMarkerResponse>>> getFriendMapMarkers(
             @AuthenticationPrincipal AuthenticatedUser user
     ) {
         return ResponseEntity.ok(CustomResponse.ok(postService.getFriendMapMarkers(getUserId(user))));

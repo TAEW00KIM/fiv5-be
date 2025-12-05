@@ -268,7 +268,7 @@ public class PostService {
                 .collect(Collectors.toList());
     }
 
-    public List<PostDto.MapMarkerResponse> getFriendMapMarkers(Long myUserId) {
+    public List<PostDto.FriendMapMarkerResponse> getFriendMapMarkers(Long myUserId) {
         List<User> friends = friendshipRepository.findActiveFriendsByUserId(myUserId);
         if (friends.isEmpty()) {
             return List.of();
@@ -279,14 +279,20 @@ public class PostService {
 
         return posts.stream()
                 .map(p -> {
-                    String thumbnail = p.getThumbnailUrl();
+                    UserDto.UserResponse userResp = UserDto.UserResponse.from(p.getUser());
+                    userResp.setRelationStatus("FRIEND");
 
-                    return PostDto.MapMarkerResponse.builder()
-                            .beaconId(p.getBeaconId())
-                            .latitude(p.getLatitude())
-                            .longitude(p.getLongitude())
-                            .count(1L)
-                            .thumbnailImageUrl(thumbnail)
+                    return PostDto.FriendMapMarkerResponse.builder()
+                            .user(userResp)
+                            .beacon(PostDto.BeaconInfo.builder()
+                                    .id(p.getBeaconId())
+                                    .latitude(p.getLatitude())
+                                    .longitude(p.getLongitude())
+                                    .build())
+                            .post(PostDto.PostInfo.builder()
+                                    .id(p.getId())
+                                    .thumbnailUrl(p.getThumbnailUrl())
+                                    .build())
                             .build();
                 })
                 .collect(Collectors.toList());
