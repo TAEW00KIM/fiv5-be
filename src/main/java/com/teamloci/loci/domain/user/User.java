@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 @Table(name = "users", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"handle"}),
         @UniqueConstraint(columnNames = {"phone_search_hash"})
+}, indexes = {
+        @Index(name = "idx_is_auto_archive", columnList = "is_auto_archive")
 })
 public class User {
 
