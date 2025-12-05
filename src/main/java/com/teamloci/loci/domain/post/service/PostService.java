@@ -138,8 +138,25 @@ public class PostService {
         if (!userRepository.existsById(targetUserId)) {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
+
         Pageable pageable = PageRequest.of(0, size + 1);
-        List<Post> posts = postRepository.findByUserIdWithCursor(targetUserId, cursorId, pageable);
+        List<Post> posts;
+
+        if (myUserId.equals(targetUserId)) {
+            posts = postRepository.findByUserIdAndStatusInWithCursor(
+                    targetUserId,
+                    List.of(PostStatus.ACTIVE, PostStatus.ARCHIVED),
+                    cursorId,
+                    pageable
+            );
+        } else {
+            posts = postRepository.findByUserIdAndStatusInWithCursor(
+                    targetUserId,
+                    List.of(PostStatus.ACTIVE),
+                    cursorId,
+                    pageable
+            );
+        }
 
         return makeFeedResponse(posts, size, myUserId);
     }
