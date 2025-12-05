@@ -32,7 +32,8 @@ import org.hibernate.annotations.BatchSize;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "posts", indexes = {
-        @Index(name = "idx_beacon_id", columnList = "beacon_id")
+        @Index(name = "idx_beacon_id", columnList = "beacon_id"),
+        @Index(name = "idx_user_id", columnList = "user_id")
 })
 public class Post extends BaseTimeEntity {
 
