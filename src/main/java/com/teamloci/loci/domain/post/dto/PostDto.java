@@ -71,10 +71,6 @@ public class PostDto {
         @NotNull
         private Double longitude;
         private String locationName;
-
-        @Schema(description = "30일 후 자동 보관 여부 설정 (true: 보관함 이동, false: 영구 게시). 미입력 시 기본값 true", example = "true")
-        @JsonProperty("isArchived")
-        private Boolean isArchived;
     }
 
     @Getter
@@ -121,9 +117,6 @@ public class PostDto {
         private LocalDateTime createdAt;
         @Schema(description = "마지막 수정 시간")
         private LocalDateTime updatedAt;
-        @Schema(description = "30일 후 자동 보관 설정 여부")
-        @JsonProperty("isArchived")
-        private Boolean isArchived;
         @Schema(description = "이 게시물의 총 댓글 수", example = "5")
         private Long commentCount;
 
